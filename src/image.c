@@ -190,6 +190,11 @@ static int decode_png(const unsigned char *d, size_t sz,
             }
         }
 
+        /* Write reconstructed bytes back into raw so that the next row's
+           prev_recon sees the actual reconstructed values, not the original
+           filtered (delta-encoded) bytes. */
+        memcpy(src, recon, (size_t)bpp * (size_t)(*width));
+
         /* Expand to output pixel array */
         if (color_type == 3) { /* indexed */
             for (int x = 0; x < *width; x++) {

@@ -27,9 +27,9 @@
 #define CODE_PAD_V     4.0f   /* vertical padding inside code blocks        */
 #define CODE_FONT_SIZE 9.5f
 #define BODY_FONT_SIZE 11.0f
-#define CODE_BG_R      0.95f
-#define CODE_BG_G      0.95f
-#define CODE_BG_B      0.95f
+#define CODE_BG_R      0.96f
+#define CODE_BG_G      0.97f
+#define CODE_BG_B      0.98f
 #define QUOTE_BAR_W    3.0f
 #define QUOTE_INDENT   12.0f
 

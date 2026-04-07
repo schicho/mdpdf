@@ -564,17 +564,12 @@ int markdown_to_pdf(const char *content, PDF *pdf, const char *input_path)
                     code_append(&code_buf, &code_cap, "");
                     break;
                 case ST_ULIST:
-                    /* Two blank lines end a list; one blank is kept inside */
-                    if (li + 1 < line_count && lines[li+1][0] == '\0') {
-                        FLUSH_ULIST();
-                        state = ST_NORMAL;
-                    }
+                    FLUSH_ULIST();
+                    state = ST_NORMAL;
                     break;
                 case ST_OLIST:
-                    if (li + 1 < line_count && lines[li+1][0] == '\0') {
-                        FLUSH_OLIST();
-                        state = ST_NORMAL;
-                    }
+                    FLUSH_OLIST();
+                    state = ST_NORMAL;
                     break;
                 case ST_BLOCKQUOTE:
                     FLUSH_QUOTE();

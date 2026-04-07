@@ -268,8 +268,7 @@ void pdf_rect_fill(PDF *pdf,
 {
     float py = PDF_Y(pdf, y_from_top) - h;
     buf_printf(&pdf->content,
-               "%.3f %.3f %.3f rg\n"
-               "%.3f %.3f %.3f %.3f re f\n",
+               "q %.3f %.3f %.3f rg %.3f %.3f %.3f %.3f re f Q\n",
                (double)r, (double)g, (double)b,
                (double)x, (double)py, (double)w, (double)h);
 }
@@ -280,9 +279,7 @@ void pdf_hline(PDF *pdf,
 {
     float py = PDF_Y(pdf, y_from_top);
     buf_printf(&pdf->content,
-               "%.3f %.3f %.3f RG\n"
-               "%.2f w\n"
-               "%.3f %.3f m %.3f %.3f l S\n",
+               "q %.3f %.3f %.3f RG %.2f w %.3f %.3f m %.3f %.3f l S Q\n",
                (double)r, (double)g, (double)b,
                (double)lw,
                (double)x, (double)py, (double)(x + width), (double)py);
@@ -295,9 +292,7 @@ void pdf_vbar(PDF *pdf,
     float py_top = PDF_Y(pdf, y_from_top);
     float py_bot = py_top - height;
     buf_printf(&pdf->content,
-               "%.3f %.3f %.3f RG\n"
-               "%.2f w\n"
-               "%.3f %.3f m %.3f %.3f l S\n",
+               "q %.3f %.3f %.3f RG %.2f w %.3f %.3f m %.3f %.3f l S Q\n",
                (double)r, (double)g, (double)b,
                (double)lw,
                (double)x, (double)py_top, (double)x, (double)py_bot);

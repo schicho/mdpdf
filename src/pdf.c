@@ -618,6 +618,11 @@ typedef struct {
 } Token;
 
 #define MAX_TOKENS 8192
+/* Buffer for concatenating a same-font token run within one line.
+ * A token is at most 512 bytes; in practice a full line of text at
+ * BODY_FONT_SIZE on a letter-size page fits well under 256 characters,
+ * so 4096 bytes is a very conservative upper bound for any single run. */
+#define RUN_TEXT_BUF 4096
 
 /*
  * Tokenise all spans into individual word tokens.
@@ -721,15 +726,27 @@ float pdf_paragraph(PDF *pdf,
                 run_end++;
 
             /* Concatenate all token texts in this run */
-            char run_text[8192];
+            char run_text[RUN_TEXT_BUF];
             int  run_ti = 0;
             for (int j = k; j < run_end; j++) {
                 const char *src = toks[j].text;
                 size_t src_len = strlen(src);
-                if (run_ti + (int)src_len < (int)sizeof(run_text) - 1) {
-                    memcpy(run_text + run_ti, src, src_len);
-                    run_ti += (int)src_len;
+                if (run_ti + (int)src_len >= (int)sizeof(run_text) - 1) {
+                    /* Buffer would overflow: emit what we have so far and restart */
+                    run_text[run_ti] = '\0';
+                    if (run_ti > 0) {
+                        buf_printf(&pdf->content,
+                                   "BT /F%d %.2f Tf %.3f %.3f Td ",
+                                   run_font, (double)font_size,
+                                   (double)run_x, (double)py);
+                        buf_pdf_string(&pdf->content, run_text);
+                        buf_append(&pdf->content, " Tj ET\n", 7);
+                    }
+                    run_x += pdf_text_width(run_text, run_font, font_size);
+                    run_ti = 0;
                 }
+                memcpy(run_text + run_ti, src, src_len);
+                run_ti += (int)src_len;
                 x += toks[j].w;
             }
             run_text[run_ti] = '\0';

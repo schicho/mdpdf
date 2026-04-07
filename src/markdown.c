@@ -25,7 +25,7 @@
 #define BODY_SIZE   11.0f
 #define CODE_SIZE    9.5f
 #define H1_SIZE     26.0f
-#define H2_SIZE     22.0f
+#define H2_SIZE     19.5f
 #define H3_SIZE     18.0f
 #define H4_SIZE     15.0f
 #define H5_SIZE     13.0f
@@ -274,18 +274,18 @@ static void render_heading(PDF *pdf, const char *text, int level)
     pdf_ensure_space(pdf, h_needed);
     pdf_advance_y(pdf, HEAD_BEFORE);
 
-    int font = (level <= 5) ? FONT_BOLD : FONT_BOLDITALIC;
+    int font = FONT_BOLD;
     pdf_text_line(pdf, text, font, size, 0.0f, leading);
 
     /* H1 / H2 get a decorative underline */
     if (level == 1) {
-        pdf_hline(pdf, ml, pdf_get_y(pdf), cw,
-                  0.2f, 0.2f, 0.2f, 1.5f);
-        pdf_advance_y(pdf, 3.0f);
+        pdf_hline(pdf, ml, pdf_get_y(pdf) + 5.0f, cw,
+                  0.89f, 0.90f, 0.93f, 0.75f);
+        pdf_advance_y(pdf, 6.0f);
     } else if (level == 2) {
-        pdf_hline(pdf, ml, pdf_get_y(pdf), cw,
-                  0.6f, 0.6f, 0.6f, 0.75f);
-        pdf_advance_y(pdf, 3.0f);
+        pdf_hline(pdf, ml, pdf_get_y(pdf) + 5.0f, cw,
+                  0.89f, 0.90f, 0.93f, 0.75f);
+        pdf_advance_y(pdf, 6.0f);
     }
     pdf_advance_y(pdf, HEAD_AFTER);
 }
@@ -644,7 +644,7 @@ int markdown_to_pdf(const char *content, PDF *pdf, const char *input_path)
             pdf_hline(pdf,
                       pdf_margin_left(pdf), pdf_get_y(pdf),
                       pdf_content_width(pdf),
-                      0.5f, 0.5f, 0.5f, 0.75f);
+                      0.89f, 0.90f, 0.93f, 0.75f);
             pdf_advance_y(pdf, 4.0f + HR_AFTER);
             state = ST_NORMAL;
             continue;

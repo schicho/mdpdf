@@ -37,7 +37,9 @@
 #define HEAD_AFTER    6.0f
 #define CODE_BEFORE   8.0f
 #define CODE_AFTER    8.0f
-#define LIST_INDENT  18.0f
+#define BULLET_INDENT 8.0f
+#define NUMBER_INDENT 8.0f
+#define LIST_INDENT  14.0f
 #define LIST_ITEM_SP  2.0f
 #define QUOTE_INDENT 16.0f
 #define HR_BEFORE    10.0f
@@ -345,7 +347,7 @@ static void render_ulist(PDF *pdf, ListItem *items, int n,
                           float extra_indent)
 {
     float ml       = pdf_margin_left(pdf);
-    float bullet_x = ml + extra_indent;
+    float bullet_x = ml + extra_indent + BULLET_INDENT;
     float text_x   = bullet_x + LIST_INDENT;
     float leading  = BODY_SIZE * 1.4f;
 
@@ -374,7 +376,7 @@ static void render_olist(PDF *pdf, ListItem *items, int n,
                           int start, float extra_indent)
 {
     float ml      = pdf_margin_left(pdf);
-    float num_x   = ml + extra_indent;
+    float num_x   = ml + extra_indent + NUMBER_INDENT;
     float text_x  = num_x + LIST_INDENT;
     float leading = BODY_SIZE * 1.4f;
 

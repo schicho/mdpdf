@@ -47,7 +47,7 @@ mdpdf input.md output.pdf # explicit output path
 | Blockquote | `> text` |
 | Horizontal rule | `---` |
 | Image | `![alt](path.jpg)` |
-| Link | `[text](url)` (text rendered, no hyperlink) |
+| Link | `[text](url)` (text rendered in blue, clickable hyperlink) |
 
 ### Images
 

@@ -618,6 +618,11 @@ typedef struct {
 } Token;
 
 #define MAX_TOKENS 8192
+/* Buffer for concatenating a same-font token run within one line.
+ * A token is at most 512 bytes; in practice a full line of text at
+ * BODY_FONT_SIZE on a letter-size page fits well under 256 characters,
+ * so 4096 bytes is a very conservative upper bound for any single run. */
+#define RUN_TEXT_BUF 4096
 
 /*
  * Tokenise all spans into individual word tokens.
@@ -707,30 +712,62 @@ float pdf_paragraph(PDF *pdf,
             ti++;
         }
 
-        /* Render the tokens on this line */
+        /* Render the tokens on this line, grouping consecutive same-font runs
+         * into a single BT...ET block to reduce PDF verbosity. */
         float x = x_left;
-        for (int k = line_start; k < line_end; k++) {
-            /* Strip trailing space from the last token on the line */
-            const char *tok_text = toks[k].text;
-            char stripped[512];
-            if (k == line_end - 1) {
-                size_t tl = strlen(tok_text);
-                while (tl > 0 && tok_text[tl-1] == ' ') tl--;
-                if (tl < sizeof(stripped)) {
-                    memcpy(stripped, tok_text, tl);
-                    stripped[tl] = '\0';
-                    tok_text = stripped;
+        int k = line_start;
+        while (k < line_end) {
+            int   run_font = toks[k].font;
+            float run_x    = x;
+
+            /* Find the end of this same-font run */
+            int run_end = k;
+            while (run_end < line_end && toks[run_end].font == run_font)
+                run_end++;
+
+            /* Concatenate all token texts in this run */
+            char run_text[RUN_TEXT_BUF];
+            int  run_ti = 0;
+            for (int j = k; j < run_end; j++) {
+                const char *src = toks[j].text;
+                size_t src_len = strlen(src);
+                if (run_ti + (int)src_len >= (int)sizeof(run_text) - 1) {
+                    /* Buffer would overflow: emit what we have so far and restart */
+                    run_text[run_ti] = '\0';
+                    if (run_ti > 0) {
+                        buf_printf(&pdf->content,
+                                   "BT /F%d %.2f Tf %.3f %.3f Td ",
+                                   run_font, (double)font_size,
+                                   (double)run_x, (double)py);
+                        buf_pdf_string(&pdf->content, run_text);
+                        buf_append(&pdf->content, " Tj ET\n", 7);
+                    }
+                    run_x += pdf_text_width(run_text, run_font, font_size);
+                    run_ti = 0;
                 }
+                memcpy(run_text + run_ti, src, src_len);
+                run_ti += (int)src_len;
+                x += toks[j].w;
             }
-            if (*tok_text) {
+            run_text[run_ti] = '\0';
+
+            /* Strip trailing space when this run ends at the last line token */
+            if (run_end == line_end) {
+                while (run_ti > 0 && run_text[run_ti - 1] == ' ')
+                    run_ti--;
+                run_text[run_ti] = '\0';
+            }
+
+            if (run_ti > 0) {
                 buf_printf(&pdf->content,
                            "BT /F%d %.2f Tf %.3f %.3f Td ",
-                           toks[k].font, (double)font_size,
-                           (double)x, (double)py);
-                buf_pdf_string(&pdf->content, tok_text);
+                           run_font, (double)font_size,
+                           (double)run_x, (double)py);
+                buf_pdf_string(&pdf->content, run_text);
                 buf_append(&pdf->content, " Tj ET\n", 7);
-                x += pdf_text_width(tok_text, toks[k].font, font_size);
             }
+
+            k = run_end;
         }
 
         pdf->y  += leading;

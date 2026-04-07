@@ -40,8 +40,6 @@ int main(int argc, char *argv[])
 
     /* Detect paper size */
     PaperSize paper = paper_get_default();
-    fprintf(stderr, "Paper size: %s (%.0f x %.0f pt)\n",
-            paper.name, (double)paper.width, (double)paper.height);
 
     /* Create PDF context */
     PDF *pdf = pdf_create(paper.width, paper.height);
@@ -66,8 +64,6 @@ int main(int argc, char *argv[])
         free(content);
         return 1;
     }
-
-    printf("Written: %s\n", output_file);
 
     pdf_free(pdf);
     free(content);

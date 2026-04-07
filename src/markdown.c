@@ -24,11 +24,11 @@
 /* ---- typographic constants -------------------------------------------- */
 #define BODY_SIZE   11.0f
 #define CODE_SIZE    9.5f
-#define H1_SIZE     26.0f
-#define H2_SIZE     19.5f
-#define H3_SIZE     18.0f
-#define H4_SIZE     15.0f
-#define H5_SIZE     13.0f
+#define H1_SIZE     24.0f
+#define H2_SIZE     18.0f
+#define H3_SIZE     16.0f
+#define H4_SIZE     14.0f
+#define H5_SIZE     12.0f
 #define H6_SIZE     11.0f
 
 #define PARA_BEFORE   6.0f

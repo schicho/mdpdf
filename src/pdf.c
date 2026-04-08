@@ -1108,28 +1108,45 @@ int pdf_write(PDF *pdf, const char *path)
             fbuf_write(&out, (char *)img->data, img->data_size);
             fbuf_printf(&out, "\nendstream\nendobj\n");
         } else {
-            /* Compress raw pixels with zlib */
-            uLongf clen = compressBound((uLong)img->data_size);
+            /* PDF only supports /DeviceGray (1 ch) or /DeviceRGB (3 ch).
+             * For greyscale+alpha (2 ch) and RGBA (4 ch), strip the alpha
+             * channel so the embedded pixel data matches the declared colorspace. */
+            int in_ch  = img->channels;
+            int out_ch = (in_ch == 1 || in_ch == 2) ? 1 : 3;
+            const char *cs = (out_ch == 1) ? "/DeviceGray" : "/DeviceRGB";
+            size_t n_px   = (size_t)img->width * (size_t)img->height;
+            size_t out_sz = n_px * (size_t)out_ch;
+
+            /* Build an alpha-stripped pixel buffer when necessary. */
+            unsigned char *pixels  = img->data;
+            unsigned char *stripped = NULL;
+            if (in_ch != out_ch) {
+                stripped = malloc(out_sz);
+                if (!stripped) { free(offsets); buf_append(&out, "", 0); return -1; }
+                for (size_t i = 0; i < n_px; i++)
+                    for (int c = 0; c < out_ch; c++)
+                        stripped[i * (size_t)out_ch + (size_t)c] =
+                            img->data[i * (size_t)in_ch + (size_t)c];
+                pixels = stripped;
+            }
+
+            /* Compress with zlib */
+            uLongf clen = compressBound((uLong)out_sz);
             unsigned char *cbuf = malloc(clen);
-            if (!cbuf) { free(offsets); buf_append(&out, "", 0); return -1; }
-            if (compress(cbuf, &clen, img->data, (uLong)img->data_size) != Z_OK) {
+            if (!cbuf) { free(stripped); free(offsets); buf_append(&out, "", 0); return -1; }
+            if (compress(cbuf, &clen, pixels, (uLong)out_sz) != Z_OK) {
                 free(cbuf);
                 /* Fall back to uncompressed */
-                /* 4-channel images: write only the RGB channels (drop alpha) */
-                const char *cs = (img->channels == 1) ? "/DeviceGray" : "/DeviceRGB";
-                int out_ch = (img->channels >= 3) ? 3 : 1;
-                size_t raw_sz = (size_t)img->width * (size_t)img->height * (size_t)out_ch;
                 fbuf_printf(&out,
                             "%d 0 obj\n"
                             "<< /Type /XObject /Subtype /Image\n"
                             "   /Width %d /Height %d /ColorSpace %s\n"
                             "   /BitsPerComponent 8 /Length %zu >>\n"
                             "stream\n",
-                            oid, img->width, img->height, cs, raw_sz);
-                fbuf_write(&out, (char *)img->data, raw_sz);
+                            oid, img->width, img->height, cs, out_sz);
+                fbuf_write(&out, (char *)pixels, out_sz);
                 fbuf_printf(&out, "\nendstream\nendobj\n");
             } else {
-                const char *cs = (img->channels == 1) ? "/DeviceGray" : "/DeviceRGB";
                 fbuf_printf(&out,
                             "%d 0 obj\n"
                             "<< /Type /XObject /Subtype /Image\n"
@@ -1142,6 +1159,7 @@ int pdf_write(PDF *pdf, const char *path)
                 fbuf_printf(&out, "\nendstream\nendobj\n");
                 free(cbuf);
             }
+            free(stripped);
         }
     }
 

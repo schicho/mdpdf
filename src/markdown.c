@@ -61,6 +61,7 @@
 #define TABLE_HDR_BG_R    0.92f /* header row background */
 #define TABLE_HDR_BG_G    0.92f
 #define TABLE_HDR_BG_B    0.95f
+#define TABLE_MIN_COL_W   10.0f /* minimum column content width in points */
 #define MAX_COLS          32    /* max columns in a table */
 #define MAX_TABLE_ROWS    256   /* max rows collected per table */
 
@@ -116,22 +117,21 @@ static int parse_table_row(const char* line, TableRow* row) {
         const char* end = strchr(p, '|');
         size_t      len = end ? (size_t)(end - p) : strlen(p);
 
-        /* copy and trim the cell */
+        /* ltrim */
+        const char* cs = p;
+        while (len > 0 && (*cs == ' ' || *cs == '\t')) {
+            cs++;
+            len--;
+        }
+        /* rtrim */
+        while (len > 0 && (unsigned char)cs[len - 1] <= (unsigned char)' ') len--;
+
+        /* copy trimmed content */
         char* cell = malloc(len + 1);
         if (!cell) break;
-        memcpy(cell, p, len);
+        memcpy(cell, cs, len);
         cell[len] = '\0';
-
-        /* ltrim */
-        char* cp = cell;
-        while (*cp == ' ' || *cp == '\t') cp++;
-        /* rtrim */
-        size_t cl = strlen(cp);
-        while (cl > 0 && ((unsigned char)cp[cl - 1] <= ' ')) cl--;
-        cp[cl] = '\0';
-
-        row->cells[n++] = strdup(cp);
-        free(cell);
+        row->cells[n++] = cell;
 
         if (end)
             p = end + 1;
@@ -177,8 +177,8 @@ static void render_table(PDF* pdf, TableRow* rows, int row_count, int col_count)
     for (int c = 0; c < col_count; c++) total_nat += nat_w[c];
 
     float total_content_avail = cw - (float)col_count * 2.0f * TABLE_CELL_PAD_H;
-    if (total_content_avail < (float)col_count * 10.0f)
-        total_content_avail = (float)col_count * 10.0f; /* minimum sane width */
+    if (total_content_avail < (float)col_count * TABLE_MIN_COL_W)
+        total_content_avail = (float)col_count * TABLE_MIN_COL_W; /* minimum sane width */
 
     if (total_nat > total_content_avail && total_nat > 0.0f) {
         float scale = total_content_avail / total_nat;

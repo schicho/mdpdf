@@ -1,11 +1,11 @@
 # mdpdf
 
-A minimal C command-line tool that converts Markdown files to PDF.
+A small C CLI that converts Markdown to PDF.
 
-- Uses only standard PDF fonts (Helvetica for body text, Courier for code). No font embedding, tiny output files
-- Detects the system paper size automatically (`en_US`/`en_CA` Letter, otherwise A4; overridable via `PAPERSIZE` env var or `/etc/papersize`)
-- Renders headings, paragraphs, bold/italic/code inline styles, fenced and indented code blocks, unordered and ordered lists, blockquotes, horizontal rules, and images (JPEG and PNG)
-- Depends only on `zlib` (for PNG support)
+- Uses only standard PDF fonts (Helvetica for body text, Courier for code). No font embedding; output stays small
+- Detects paper size automatically (`en_US`/`en_CA` use Letter, otherwise A4). Override with `PAPERSIZE` or `/etc/papersize`
+- Renders headings, paragraphs, inline bold/italic/code, fenced and indented code blocks, unordered and ordered lists, blockquotes, horizontal rules, and images (JPEG/PNG)
+- Depends only on `zlib` (for PNG)
 
 ## Building
 
@@ -13,8 +13,8 @@ A minimal C command-line tool that converts Markdown files to PDF.
 make
 ```
 
-A single `make` call is all that's needed.  GCC or Clang with a C11-capable
-standard library and `zlib-dev` (or equivalent) installed is required.
+One `make` call builds the tool. GCC or Clang with a C11-capable
+standard library and `zlib-dev` (or equivalent) is required.
 
 To install system-wide:
 
@@ -48,12 +48,12 @@ mdpdf input.md output.pdf # explicit output path
 | Image | `![alt](path.jpg)` |
 | Link | `[text](url)` (text rendered in blue, clickable hyperlink) |
 
-Rendering tables is currently not supported.
+Tables are not supported.
 
 ### Images
 
-JPEG and PNG images are supported.  The path in `![alt](path)` is
-resolved relative to the Markdown file's directory.
+JPEG and PNG are supported. The path in `![alt](path)` is
+resolved relative to the Markdown file directory.
 
-JPEG images are embedded directly (DCTDecode).  PNG images are decoded
+JPEG images are embedded directly (DCTDecode). PNG images are decoded
 using zlib and the raw pixels are re-compressed with FlateDecode.

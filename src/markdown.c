@@ -124,7 +124,7 @@ static int parse_table_row(const char* line, TableRow* row) {
             len--;
         }
         /* rtrim */
-        while (len > 0 && (unsigned char)cs[len - 1] <= (unsigned char)' ') len--;
+        while (len > 0 && (unsigned char)cs[len - 1] <= ' ') len--;
 
         /* copy trimmed content */
         char* cell = malloc(len + 1);
@@ -820,38 +820,41 @@ int markdown_to_pdf(const char* content, PDF* pdf, const char* input_path) {
         }
 
         /* ---- look-ahead: table header? -------------------------------- */
-        if (li + 1 < line_count && is_table_row(line) && is_table_sep_row(lines[li + 1])) {
-            /* Flush whatever was in progress */
-            switch (state) {
-                case ST_PARA:
-                    FLUSH_PARA();
-                    break;
-                case ST_ULIST:
-                    FLUSH_ULIST();
-                    break;
-                case ST_OLIST:
-                    FLUSH_OLIST();
-                    break;
-                case ST_BLOCKQUOTE:
-                    FLUSH_QUOTE();
-                    break;
-                case ST_CODE_INDENT:
-                    FLUSH_CODE();
-                    break;
-                case ST_TABLE:
-                    FLUSH_TABLE(); /* shouldn't happen, but be safe */
-                    break;
-                default:
-                    break;
+        {
+            int line_has_pipe = is_table_row(line);
+            if (li + 1 < line_count && line_has_pipe && is_table_sep_row(lines[li + 1])) {
+                /* Flush whatever was in progress */
+                switch (state) {
+                    case ST_PARA:
+                        FLUSH_PARA();
+                        break;
+                    case ST_ULIST:
+                        FLUSH_ULIST();
+                        break;
+                    case ST_OLIST:
+                        FLUSH_OLIST();
+                        break;
+                    case ST_BLOCKQUOTE:
+                        FLUSH_QUOTE();
+                        break;
+                    case ST_CODE_INDENT:
+                        FLUSH_CODE();
+                        break;
+                    case ST_TABLE:
+                        FLUSH_TABLE(); /* shouldn't happen, but be safe */
+                        break;
+                    default:
+                        break;
+                }
+                /* Parse header row */
+                tbl_rows[0].is_header = 1;
+                int nc = parse_table_row(line, &tbl_rows[0]);
+                tbl_row_count = 1;
+                tbl_col_count = nc;
+                li++; /* skip the separator row */
+                state = ST_TABLE;
+                continue;
             }
-            /* Parse header row */
-            tbl_rows[0].is_header = 1;
-            int nc = parse_table_row(line, &tbl_rows[0]);
-            tbl_row_count = 1;
-            tbl_col_count = nc;
-            li++; /* skip the separator row */
-            state = ST_TABLE;
-            continue;
         }
 
         /* ---- ATX heading --------------------------------------------- */

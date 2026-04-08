@@ -869,6 +869,82 @@ float pdf_paragraph(PDF* pdf, const char* text, float left_indent, float right_i
     return total_h;
 }
 
+/* ── paragraph height measurement (no rendering) ──────────────────────────── */
+
+float pdf_measure_paragraph(PDF* pdf, const char* text, float left_indent, float right_indent,
+                            float font_size, int base_font, float leading) {
+    if (!text || !*text) return 0.0f;
+    if (leading <= 0.0f) leading = font_size * 1.4f;
+
+    float x_left  = pdf->ml + left_indent;
+    float x_right = pdf->pw - pdf->mr - right_indent;
+    float max_w   = x_right - x_left;
+    if (max_w <= 0.0f) return 0.0f;
+
+    Span* spans = malloc(MAX_SPANS * sizeof(Span));
+    if (!spans) return 0.0f;
+    int ns = parse_inline(text, base_font, spans, MAX_SPANS);
+    if (ns == 0) {
+        free(spans);
+        return 0.0f;
+    }
+
+    Token* toks = malloc(MAX_TOKENS * sizeof(Token));
+    if (!toks) {
+        free(spans);
+        return 0.0f;
+    }
+    int nt = build_tokens(spans, ns, toks, MAX_TOKENS, font_size);
+    free(spans);
+
+    float total_h = 0.0f;
+    int   ti      = 0;
+    while (ti < nt) {
+        float line_w   = 0.0f;
+        int   line_start = ti;
+        int   line_end   = ti;
+        while (ti < nt) {
+            float tw = toks[ti].w;
+            if (line_end > line_start && line_w + tw > max_w) break;
+            line_w += tw;
+            line_end = ti + 1;
+            ti++;
+        }
+        total_h += leading;
+    }
+
+    free(toks);
+    return total_h;
+}
+
+/* ── natural inline text width (no PDF context needed) ───────────────────── */
+
+float pdf_inline_width(const char* text, float font_size, int base_font) {
+    if (!text || !*text) return 0.0f;
+
+    Span* spans = malloc(MAX_SPANS * sizeof(Span));
+    if (!spans) return 0.0f;
+    int ns = parse_inline(text, base_font, spans, MAX_SPANS);
+    if (ns == 0) {
+        free(spans);
+        return 0.0f;
+    }
+
+    Token* toks = malloc(MAX_TOKENS * sizeof(Token));
+    if (!toks) {
+        free(spans);
+        return 0.0f;
+    }
+    int nt = build_tokens(spans, ns, toks, MAX_TOKENS, font_size);
+    free(spans);
+
+    float total_w = 0.0f;
+    for (int i = 0; i < nt; i++) total_w += toks[i].w;
+
+    free(toks);
+    return total_w;
+}
+
 /* ── code block renderer ──────────────────────────────────────────────────── */
 
 float pdf_code_block(PDF* pdf, const char* code, float left_indent) {

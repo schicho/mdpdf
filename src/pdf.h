@@ -103,6 +103,21 @@ float pdf_paragraph(PDF* pdf, const char* text, float left_indent, float right_i
 float pdf_code_block(PDF* pdf, const char* code, float left_indent);
 
 /*
+ * Measure the height (in PDF points) that pdf_paragraph() would use to render
+ * 'text' with the given parameters, without drawing anything.
+ * Useful for pre-computing row heights in table cells.
+ */
+float pdf_measure_paragraph(PDF* pdf, const char* text, float left_indent, float right_indent,
+                            float font_size, int base_font, float leading);
+
+/*
+ * Return the natural (single-line, unwrapped) width in PDF points of 'text'
+ * when rendered with inline markup at 'font_size' and 'base_font'.
+ * Does not require a PDF context.
+ */
+float pdf_inline_width(const char* text, float font_size, int base_font);
+
+/*
  * Embed an image from 'path' (JPEG or PNG), scaled to fit within
  * max_width × max_height (pass 0 for "no limit").
  * Returns the height used in points, or 0 on failure.

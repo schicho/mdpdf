@@ -50,6 +50,21 @@
 #define IMG_AFTER     8.0f
 #define QUOTE_BAR_W   3.0f
 
+/* ---- table constants --------------------------------------------------- */
+#define TABLE_CELL_PAD_H  6.0f  /* horizontal padding inside each cell */
+#define TABLE_CELL_PAD_V  4.0f  /* vertical padding inside each cell (each side) */
+#define TABLE_BEFORE      8.0f  /* vertical space before the table */
+#define TABLE_AFTER       8.0f  /* vertical space after the table */
+#define TABLE_BORDER_R    0.70f /* cell border colour */
+#define TABLE_BORDER_G    0.70f
+#define TABLE_BORDER_B    0.70f
+#define TABLE_HDR_BG_R    0.92f /* header row background */
+#define TABLE_HDR_BG_G    0.92f
+#define TABLE_HDR_BG_B    0.95f
+#define TABLE_MIN_COL_W   10.0f /* minimum column content width in points */
+#define MAX_COLS          32    /* max columns in a table */
+#define MAX_TABLE_ROWS    256   /* max rows collected per table */
+
 /* ---- small string utilities ------------------------------------------- */
 
 static void rtrim(char* s) {
@@ -60,6 +75,183 @@ static void rtrim(char* s) {
 static const char* ltrim_ptr(const char* s) {
     while (*s == ' ' || *s == '\t') s++;
     return s;
+}
+
+/* ---- table utilities --------------------------------------------------- */
+
+/* A row is a table row if it contains at least one pipe character. */
+static int is_table_row(const char* line) { return strchr(line, '|') != NULL; }
+
+/*
+ * A separator row contains only '|', '-', ':', and whitespace and must have
+ * at least one '|' and one '-'.
+ */
+static int is_table_sep_row(const char* line) {
+    if (!strchr(line, '|')) return 0;
+    if (!strchr(line, '-')) return 0;
+    for (const char* p = line; *p; p++) {
+        char c = *p;
+        if (c != '|' && c != '-' && c != ':' && c != ' ' && c != '\t') return 0;
+    }
+    return 1;
+}
+
+/* TableRow: a parsed table row with up to MAX_COLS cell strings. */
+typedef struct {
+    char* cells[MAX_COLS];
+    int   col_count;
+    int   is_header; /* 1 for the header row */
+} TableRow;
+
+/*
+ * Parse cell strings from a table row line, splitting on '|'.
+ * Cells are trimmed of leading/trailing whitespace.
+ * Returns number of cells parsed (stored in row->cells[]; ownership transferred).
+ */
+static int parse_table_row(const char* line, TableRow* row) {
+    const char* p = ltrim_ptr(line);
+    if (*p == '|') p++; /* skip optional leading pipe */
+
+    int n = 0;
+    while (*p && n < MAX_COLS) {
+        const char* end = strchr(p, '|');
+        size_t      len = end ? (size_t)(end - p) : strlen(p);
+
+        /* ltrim */
+        const char* cs = p;
+        while (len > 0 && (*cs == ' ' || *cs == '\t')) {
+            cs++;
+            len--;
+        }
+        /* rtrim */
+        while (len > 0 && (unsigned char)cs[len - 1] <= ' ') len--;
+
+        /* copy trimmed content */
+        char* cell = malloc(len + 1);
+        if (!cell) break;
+        memcpy(cell, cs, len);
+        cell[len] = '\0';
+        row->cells[n++] = cell;
+
+        if (end)
+            p = end + 1;
+        else
+            break;
+    }
+    row->col_count = n;
+    return n;
+}
+
+static void table_row_free(TableRow* row) {
+    for (int c = 0; c < row->col_count; c++) {
+        free(row->cells[c]);
+        row->cells[c] = NULL;
+    }
+    row->col_count = 0;
+}
+
+/* ---- table renderer ---------------------------------------------------- */
+
+static void render_table(PDF* pdf, TableRow* rows, int row_count, int col_count) {
+    if (row_count == 0 || col_count == 0) return;
+
+    float cw = pdf_content_width(pdf);
+    float ml = pdf_margin_left(pdf);
+
+    /* --- compute natural column widths ------------------------------------ */
+    float nat_w[MAX_COLS];
+    for (int c = 0; c < col_count; c++) nat_w[c] = 0.0f;
+
+    for (int r = 0; r < row_count; r++) {
+        int font = rows[r].is_header ? FONT_BOLD : FONT_NORMAL;
+        for (int c = 0; c < rows[r].col_count; c++) {
+            if (!rows[r].cells[c]) continue;
+            float w = pdf_inline_width(rows[r].cells[c], BODY_SIZE, font);
+            if (w > nat_w[c]) nat_w[c] = w;
+        }
+    }
+
+    /* --- scale columns to fit content width ------------------------------- */
+    /* total available width for content (inside padding) */
+    float total_nat = 0.0f;
+    for (int c = 0; c < col_count; c++) total_nat += nat_w[c];
+
+    float total_content_avail = cw - (float)col_count * 2.0f * TABLE_CELL_PAD_H;
+    if (total_content_avail < (float)col_count * TABLE_MIN_COL_W)
+        total_content_avail = (float)col_count * TABLE_MIN_COL_W; /* minimum sane width */
+
+    if (total_nat > total_content_avail && total_nat > 0.0f) {
+        float scale = total_content_avail / total_nat;
+        for (int c = 0; c < col_count; c++) nat_w[c] *= scale;
+    }
+
+    /* --- column x positions (content-area-relative) ----------------------- */
+    /* col_x[c] = left edge of column c (including its left cell padding) */
+    float col_x[MAX_COLS + 1];
+    col_x[0] = 0.0f;
+    for (int c = 0; c < col_count; c++)
+        col_x[c + 1] = col_x[c] + nat_w[c] + 2.0f * TABLE_CELL_PAD_H;
+
+    float table_w = col_x[col_count];
+
+    /* --- render each row -------------------------------------------------- */
+    for (int r = 0; r < row_count; r++) {
+        int font = rows[r].is_header ? FONT_BOLD : FONT_NORMAL;
+
+        /* measure row height: max over all cells */
+        float leading = BODY_SIZE * 1.4f;
+        float row_h   = leading; /* at least one line */
+        for (int c = 0; c < rows[r].col_count; c++) {
+            if (!rows[r].cells[c] || !rows[r].cells[c][0]) continue;
+            float li = col_x[c] + TABLE_CELL_PAD_H;
+            float ri = cw - col_x[c + 1] + TABLE_CELL_PAD_H;
+            float h  = pdf_measure_paragraph(pdf, rows[r].cells[c], li, ri, BODY_SIZE, font, 0.0f);
+            if (h > row_h) row_h = h;
+        }
+        row_h += 2.0f * TABLE_CELL_PAD_V;
+
+        /* ensure the whole row fits on the page */
+        pdf_ensure_space(pdf, row_h + 1.0f);
+        float y0 = pdf_get_y(pdf);
+
+        /* header background */
+        if (rows[r].is_header)
+            pdf_rect_fill(pdf, ml, y0, table_w, row_h, TABLE_HDR_BG_R, TABLE_HDR_BG_G,
+                          TABLE_HDR_BG_B);
+
+        /* top border of this row */
+        pdf_hline(pdf, ml, y0, table_w, TABLE_BORDER_R, TABLE_BORDER_G, TABLE_BORDER_B, 0.5f);
+
+        /* left and right outer borders */
+        pdf_vbar(pdf, ml, y0, row_h, TABLE_BORDER_R, TABLE_BORDER_G, TABLE_BORDER_B, 0.5f);
+        pdf_vbar(pdf, ml + table_w, y0, row_h, TABLE_BORDER_R, TABLE_BORDER_G, TABLE_BORDER_B,
+                 0.5f);
+
+        /* inner column dividers */
+        for (int c = 1; c < col_count; c++)
+            pdf_vbar(pdf, ml + col_x[c], y0, row_h, TABLE_BORDER_R, TABLE_BORDER_G, TABLE_BORDER_B,
+                     0.5f);
+
+        /* render cell text */
+        for (int c = 0; c < rows[r].col_count; c++) {
+            if (!rows[r].cells[c] || !rows[r].cells[c][0]) continue;
+            float li = col_x[c] + TABLE_CELL_PAD_H;
+            float ri = cw - col_x[c + 1] + TABLE_CELL_PAD_H;
+
+            /* position Y at cell top + padding */
+            float cell_y = y0 + TABLE_CELL_PAD_V;
+            pdf_advance_y(pdf, cell_y - pdf_get_y(pdf));
+
+            pdf_paragraph(pdf, rows[r].cells[c], li, ri, BODY_SIZE, font, 0.0f);
+        }
+
+        /* advance past the full row height */
+        pdf_advance_y(pdf, y0 + row_h - pdf_get_y(pdf));
+    }
+
+    /* bottom border of the last row */
+    pdf_hline(pdf, ml, pdf_get_y(pdf), table_w, TABLE_BORDER_R, TABLE_BORDER_G, TABLE_BORDER_B,
+              0.5f);
 }
 
 /* Count leading '#' for ATX headings; 0 if not a heading. */
@@ -457,6 +649,7 @@ int markdown_to_pdf(const char* content, PDF* pdf, const char* input_path) {
         ST_ULIST,
         ST_OLIST,
         ST_BLOCKQUOTE,
+        ST_TABLE,
     } state = ST_NORMAL;
 
     char*  para_buf = NULL;
@@ -468,6 +661,11 @@ int markdown_to_pdf(const char* content, PDF* pdf, const char* input_path) {
     char   fence_char = '`';
     float  list_indent = 0.0f;
     int    ol_start = 1;
+
+    /* Table accumulator */
+    TableRow tbl_rows[MAX_TABLE_ROWS];
+    int      tbl_row_count = 0;
+    int      tbl_col_count = 0;
 
     ListItem items[MAX_ITEMS];
     int      item_count = 0;
@@ -525,6 +723,19 @@ int markdown_to_pdf(const char* content, PDF* pdf, const char* input_path) {
         }                                      \
     } while (0)
 
+    /* Helper: flush table */
+#define FLUSH_TABLE()                                                               \
+    do {                                                                            \
+        if (tbl_row_count > 0) {                                                    \
+            pdf_advance_y(pdf, TABLE_BEFORE);                                       \
+            render_table(pdf, tbl_rows, tbl_row_count, tbl_col_count);              \
+            pdf_advance_y(pdf, TABLE_AFTER);                                        \
+            for (int _r = 0; _r < tbl_row_count; _r++) table_row_free(&tbl_rows[_r]); \
+            tbl_row_count = 0;                                                      \
+            tbl_col_count = 0;                                                      \
+        }                                                                           \
+    } while (0)
+
     for (int li = 0; li < line_count; li++) {
         const char* line = lines[li];
 
@@ -564,6 +775,10 @@ int markdown_to_pdf(const char* content, PDF* pdf, const char* input_path) {
                     FLUSH_QUOTE();
                     state = ST_NORMAL;
                     break;
+                case ST_TABLE:
+                    FLUSH_TABLE();
+                    state = ST_NORMAL;
+                    break;
                 default:
                     break;
             }
@@ -591,12 +806,53 @@ int markdown_to_pdf(const char* content, PDF* pdf, const char* input_path) {
                     case ST_CODE_INDENT:
                         FLUSH_CODE();
                         break;
+                    case ST_TABLE:
+                        FLUSH_TABLE();
+                        break;
                     default:
                         break;
                 }
                 render_heading(pdf, line, sul);
                 li++; /* skip underline */
                 state = ST_NORMAL;
+                continue;
+            }
+        }
+
+        /* ---- look-ahead: table header? -------------------------------- */
+        {
+            int line_has_pipe = is_table_row(line);
+            if (li + 1 < line_count && line_has_pipe && is_table_sep_row(lines[li + 1])) {
+                /* Flush whatever was in progress */
+                switch (state) {
+                    case ST_PARA:
+                        FLUSH_PARA();
+                        break;
+                    case ST_ULIST:
+                        FLUSH_ULIST();
+                        break;
+                    case ST_OLIST:
+                        FLUSH_OLIST();
+                        break;
+                    case ST_BLOCKQUOTE:
+                        FLUSH_QUOTE();
+                        break;
+                    case ST_CODE_INDENT:
+                        FLUSH_CODE();
+                        break;
+                    case ST_TABLE:
+                        FLUSH_TABLE(); /* shouldn't happen, but be safe */
+                        break;
+                    default:
+                        break;
+                }
+                /* Parse header row */
+                tbl_rows[0].is_header = 1;
+                int nc = parse_table_row(line, &tbl_rows[0]);
+                tbl_row_count = 1;
+                tbl_col_count = nc;
+                li++; /* skip the separator row */
+                state = ST_TABLE;
                 continue;
             }
         }
@@ -620,6 +876,9 @@ int markdown_to_pdf(const char* content, PDF* pdf, const char* input_path) {
                         break;
                     case ST_CODE_INDENT:
                         FLUSH_CODE();
+                        break;
+                    case ST_TABLE:
+                        FLUSH_TABLE();
                         break;
                     default:
                         break;
@@ -658,6 +917,9 @@ int markdown_to_pdf(const char* content, PDF* pdf, const char* input_path) {
                 case ST_CODE_INDENT:
                     FLUSH_CODE();
                     break;
+                case ST_TABLE:
+                    FLUSH_TABLE();
+                    break;
                 default:
                     break;
             }
@@ -690,6 +952,9 @@ int markdown_to_pdf(const char* content, PDF* pdf, const char* input_path) {
                     case ST_CODE_INDENT:
                         FLUSH_CODE();
                         break;
+                    case ST_TABLE:
+                        FLUSH_TABLE();
+                        break;
                     default:
                         break;
                 }
@@ -701,7 +966,8 @@ int markdown_to_pdf(const char* content, PDF* pdf, const char* input_path) {
         }
 
         /* ---- indented code block -------------------------------------- */
-        if (indented_code(line) && state != ST_PARA && state != ST_ULIST && state != ST_OLIST) {
+        if (indented_code(line) && state != ST_PARA && state != ST_ULIST && state != ST_OLIST &&
+            state != ST_TABLE) {
             if (state != ST_CODE_INDENT) {
                 switch (state) {
                     case ST_BLOCKQUOTE:
@@ -719,6 +985,22 @@ int markdown_to_pdf(const char* content, PDF* pdf, const char* input_path) {
         } else if (state == ST_CODE_INDENT) {
             FLUSH_CODE();
             state = ST_NORMAL;
+        }
+
+        /* ---- table data row ------------------------------------------- */
+        if (state == ST_TABLE) {
+            if (is_table_row(line) && tbl_row_count < MAX_TABLE_ROWS) {
+                TableRow* row = &tbl_rows[tbl_row_count];
+                row->is_header = 0;
+                int nc = parse_table_row(line, row);
+                if (nc > tbl_col_count) tbl_col_count = nc;
+                tbl_row_count++;
+                continue;
+            } else {
+                FLUSH_TABLE();
+                state = ST_NORMAL;
+                /* fall through to process this line normally */
+            }
         }
 
         /* ---- blockquote ----------------------------------------------- */
@@ -886,6 +1168,9 @@ int markdown_to_pdf(const char* content, PDF* pdf, const char* input_path) {
         case ST_BLOCKQUOTE:
             FLUSH_QUOTE();
             break;
+        case ST_TABLE:
+            FLUSH_TABLE();
+            break;
         default:
             break;
     }
@@ -895,6 +1180,7 @@ int markdown_to_pdf(const char* content, PDF* pdf, const char* input_path) {
 #undef FLUSH_ULIST
 #undef FLUSH_OLIST
 #undef FLUSH_QUOTE
+#undef FLUSH_TABLE
 
     free(para_buf);
     free(code_buf);

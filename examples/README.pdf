@@ -1,0 +1,223 @@
+%PDF-1.4
+%ту╧╙
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Oblique /Encoding /WinAnsiEncoding >>
+endobj
+6 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-BoldOblique /Encoding /WinAnsiEncoding >>
+endobj
+7 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier /Encoding /WinAnsiEncoding >>
+endobj
+8 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier-Bold /Encoding /WinAnsiEncoding >>
+endobj
+9 0 obj
+<< /Length 5515 >>
+stream
+BT /F1 24.00 Tf 72.000 731.890 Td (mdpdf) Tj ET
+q 0.890 0.900 0.930 RG 0.75 w 72.000 722.090 m 523.276 722.090 l S Q
+BT /F0 11.00 Tf 72.000 698.090 Td (A small C CLI that converts Markdown to PDF.) Tj ET
+BT /F0 11.00 Tf 80.000 672.690 Td (Х) Tj ET
+BT /F0 11.00 Tf 94.000 672.690 Td (Uses only standard PDF fonts \(Helvetica for body text, Courier for code\). No font) Tj ET
+BT /F0 11.00 Tf 94.000 657.290 Td (embedding; output stays small) Tj ET
+BT /F0 11.00 Tf 80.000 639.890 Td (Х) Tj ET
+BT /F0 11.00 Tf 94.000 639.890 Td (Detects paper size automatically \() Tj ET
+BT /F4 11.00 Tf 259.055 639.890 Td (en_US) Tj ET
+BT /F0 11.00 Tf 292.055 639.890 Td (/) Tj ET
+BT /F4 11.00 Tf 295.113 639.890 Td (en_CA ) Tj ET
+BT /F0 11.00 Tf 334.713 639.890 Td (use Letter, otherwise A4\). Override) Tj ET
+BT /F0 11.00 Tf 94.000 624.490 Td (with ) Tj ET
+BT /F4 11.00 Tf 116.616 624.490 Td (PAPERSIZE ) Tj ET
+BT /F0 11.00 Tf 182.616 624.490 Td (or ) Tj ET
+BT /F4 11.00 Tf 195.453 624.490 Td (/etc/papersize) Tj ET
+BT /F0 11.00 Tf 80.000 607.090 Td (Х) Tj ET
+BT /F0 11.00 Tf 94.000 607.090 Td (Renders headings, paragraphs, inline bold/italic/code, fenced and indented code) Tj ET
+BT /F0 11.00 Tf 94.000 591.690 Td (blocks, unordered and ordered lists, blockquotes, horizontal rules, and images) Tj ET
+BT /F0 11.00 Tf 94.000 576.290 Td (\(JPEG/PNG\)) Tj ET
+BT /F0 11.00 Tf 80.000 558.890 Td (Х) Tj ET
+BT /F0 11.00 Tf 94.000 558.890 Td (Depends only on ) Tj ET
+BT /F4 11.00 Tf 179.602 558.890 Td (zlib ) Tj ET
+BT /F0 11.00 Tf 212.602 558.890 Td (\(for PNG\)) Tj ET
+BT /F1 18.00 Tf 72.000 516.490 Td (Building) Tj ET
+q 0.890 0.900 0.930 RG 0.75 w 72.000 507.890 m 523.276 507.890 l S Q
+q 0.960 0.970 0.980 rg 72.000 476.540 451.276 16.350 re f Q
+BT /F4 9.50 Tf 78.000 481.390 Td (make) Tj ET
+BT /F0 11.00 Tf 72.000 451.540 Td (One ) Tj ET
+BT /F4 11.00 Tf 95.848 451.540 Td (make ) Tj ET
+BT /F0 11.00 Tf 128.848 451.540 Td (call builds the tool. GCC or Clang with a C11-capable standard library and) Tj ET
+BT /F4 11.00 Tf 72.000 436.140 Td (zlib-dev ) Tj ET
+BT /F0 11.00 Tf 131.400 436.140 Td (\(or equivalent\) is required.) Tj ET
+BT /F0 11.00 Tf 72.000 410.740 Td (To install system-wide:) Tj ET
+q 0.960 0.970 0.980 rg 72.000 377.990 451.276 16.350 re f Q
+BT /F4 9.50 Tf 78.000 382.840 Td (sudo make install   # installs to /usr/local/bin/) Tj ET
+BT /F1 18.00 Tf 72.000 337.990 Td (Usage) Tj ET
+q 0.890 0.900 0.930 RG 0.75 w 72.000 329.390 m 523.276 329.390 l S Q
+q 0.960 0.970 0.980 rg 72.000 298.040 451.276 16.350 re f Q
+BT /F4 9.50 Tf 78.000 302.890 Td (mdpdf input.md            # writes input.pdf) Tj ET
+q 0.960 0.970 0.980 rg 72.000 281.690 451.276 16.350 re f Q
+BT /F4 9.50 Tf 78.000 286.540 Td (mdpdf input.md output.pdf # explicit output path) Tj ET
+BT /F1 18.00 Tf 72.000 241.690 Td (Supported Markdown) Tj ET
+q 0.890 0.900 0.930 RG 0.75 w 72.000 233.090 m 523.276 233.090 l S Q
+q 0.920 0.920 0.950 rg 72.000 194.690 404.611 23.400 re f Q
+q 0.700 0.700 0.700 RG 0.50 w 72.000 218.090 m 476.611 218.090 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 72.000 218.090 m 72.000 194.690 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 476.611 218.090 m 476.611 194.690 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 182.450 218.090 m 182.450 194.690 l S Q
+BT /F1 11.00 Tf 78.000 203.090 Td (Feature) Tj ET
+BT /F1 11.00 Tf 188.450 203.090 Td (Example) Tj ET
+q 0.700 0.700 0.700 RG 0.50 w 72.000 194.690 m 476.611 194.690 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 72.000 194.690 m 72.000 171.290 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 476.611 194.690 m 476.611 171.290 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 182.450 194.690 m 182.450 171.290 l S Q
+BT /F0 11.00 Tf 78.000 179.690 Td (ATX headings) Tj ET
+BT /F4 11.00 Tf 188.450 179.690 Td (# H1 ) Tj ET
+BT /F0 11.00 Tf 221.450 179.690 Td (Е ) Tj ET
+BT /F4 11.00 Tf 242.856 179.690 Td (###### H6) Tj ET
+q 0.700 0.700 0.700 RG 0.50 w 72.000 171.290 m 476.611 171.290 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 72.000 171.290 m 72.000 147.890 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 476.611 171.290 m 476.611 147.890 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 182.450 171.290 m 182.450 147.890 l S Q
+BT /F0 11.00 Tf 78.000 156.290 Td (Setext headings) Tj ET
+BT /F4 11.00 Tf 188.450 156.290 Td (Title\\n===) Tj ET
+q 0.700 0.700 0.700 RG 0.50 w 72.000 147.890 m 476.611 147.890 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 72.000 147.890 m 72.000 124.490 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 476.611 147.890 m 476.611 124.490 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 182.450 147.890 m 182.450 124.490 l S Q
+BT /F0 11.00 Tf 78.000 132.890 Td (Bold) Tj ET
+BT /F4 11.00 Tf 188.450 132.890 Td (**bold** ) Tj ET
+BT /F0 11.00 Tf 247.850 132.890 Td (or ) Tj ET
+BT /F4 11.00 Tf 260.687 132.890 Td (__bold__) Tj ET
+q 0.700 0.700 0.700 RG 0.50 w 72.000 124.490 m 476.611 124.490 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 72.000 124.490 m 72.000 101.090 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 476.611 124.490 m 476.611 101.090 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 182.450 124.490 m 182.450 101.090 l S Q
+BT /F0 11.00 Tf 78.000 109.490 Td (Italic) Tj ET
+BT /F4 11.00 Tf 188.450 109.490 Td (*italic* ) Tj ET
+BT /F0 11.00 Tf 247.850 109.490 Td (or ) Tj ET
+BT /F4 11.00 Tf 260.687 109.490 Td (_italic_) Tj ET
+q 0.700 0.700 0.700 RG 0.50 w 72.000 101.090 m 476.611 101.090 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 72.000 101.090 m 72.000 77.690 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 476.611 101.090 m 476.611 77.690 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 182.450 101.090 m 182.450 77.690 l S Q
+BT /F0 11.00 Tf 78.000 86.090 Td (Bold-italic) Tj ET
+BT /F4 11.00 Tf 188.450 86.090 Td (***both***) Tj ET
+endstream
+endobj
+10 0 obj
+<< /Type /Page /Parent 2 0 R
+   /MediaBox [0 0 595.276 841.890]
+   /Resources << /Font << /F0 3 0 R /F1 4 0 R /F2 5 0 R /F3 6 0 R /F4 7 0 R /F5 8 0 R >> >>
+   /Contents 9 0 R >>
+endobj
+11 0 obj
+<< /Length 4178 >>
+stream
+q 0.700 0.700 0.700 RG 0.50 w 72.000 769.890 m 476.611 769.890 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 72.000 769.890 m 72.000 746.490 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 476.611 769.890 m 476.611 746.490 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 182.450 769.890 m 182.450 746.490 l S Q
+BT /F0 11.00 Tf 78.000 754.890 Td (Inline code) Tj ET
+BT /F4 11.00 Tf 188.450 754.890 Td (code) Tj ET
+q 0.700 0.700 0.700 RG 0.50 w 72.000 746.490 m 476.611 746.490 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 72.000 746.490 m 72.000 723.090 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 476.611 746.490 m 476.611 723.090 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 182.450 746.490 m 182.450 723.090 l S Q
+BT /F0 11.00 Tf 78.000 731.490 Td (Fenced code block) Tj ET
+BT /F0 11.00 Tf 188.450 731.490 Td (lang `) Tj ET
+q 0.700 0.700 0.700 RG 0.50 w 72.000 723.090 m 476.611 723.090 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 72.000 723.090 m 72.000 699.690 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 476.611 723.090 m 476.611 699.690 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 182.450 723.090 m 182.450 699.690 l S Q
+BT /F0 11.00 Tf 78.000 708.090 Td (Indented code block) Tj ET
+BT /F0 11.00 Tf 188.450 708.090 Td (4-space or tab indent) Tj ET
+q 0.700 0.700 0.700 RG 0.50 w 72.000 699.690 m 476.611 699.690 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 72.000 699.690 m 72.000 676.290 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 476.611 699.690 m 476.611 676.290 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 182.450 699.690 m 182.450 676.290 l S Q
+BT /F0 11.00 Tf 78.000 684.690 Td (Unordered list) Tj ET
+BT /F4 11.00 Tf 188.450 684.690 Td (- item) Tj ET
+q 0.700 0.700 0.700 RG 0.50 w 72.000 676.290 m 476.611 676.290 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 72.000 676.290 m 72.000 652.890 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 476.611 676.290 m 476.611 652.890 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 182.450 676.290 m 182.450 652.890 l S Q
+BT /F0 11.00 Tf 78.000 661.290 Td (Ordered list) Tj ET
+BT /F4 11.00 Tf 188.450 661.290 Td (1. item) Tj ET
+q 0.700 0.700 0.700 RG 0.50 w 72.000 652.890 m 476.611 652.890 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 72.000 652.890 m 72.000 629.490 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 476.611 652.890 m 476.611 629.490 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 182.450 652.890 m 182.450 629.490 l S Q
+BT /F0 11.00 Tf 78.000 637.890 Td (Blockquote) Tj ET
+BT /F4 11.00 Tf 188.450 637.890 Td (> text) Tj ET
+q 0.700 0.700 0.700 RG 0.50 w 72.000 629.490 m 476.611 629.490 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 72.000 629.490 m 72.000 606.090 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 476.611 629.490 m 476.611 606.090 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 182.450 629.490 m 182.450 606.090 l S Q
+BT /F0 11.00 Tf 78.000 614.490 Td (Horizontal rule) Tj ET
+BT /F4 11.00 Tf 188.450 614.490 Td (---) Tj ET
+q 0.700 0.700 0.700 RG 0.50 w 72.000 606.090 m 476.611 606.090 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 72.000 606.090 m 72.000 582.690 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 476.611 606.090 m 476.611 582.690 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 182.450 606.090 m 182.450 582.690 l S Q
+BT /F0 11.00 Tf 78.000 591.090 Td (Image) Tj ET
+BT /F4 11.00 Tf 188.450 591.090 Td (![alt]\(path.jpg\)) Tj ET
+q 0.700 0.700 0.700 RG 0.50 w 72.000 582.690 m 476.611 582.690 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 72.000 582.690 m 72.000 559.290 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 476.611 582.690 m 476.611 559.290 l S Q
+q 0.700 0.700 0.700 RG 0.50 w 182.450 582.690 m 182.450 559.290 l S Q
+BT /F0 11.00 Tf 78.000 567.690 Td (Link) Tj ET
+BT /F4 11.00 Tf 188.450 567.690 Td ([text]\(url\) ) Tj ET
+BT /F0 11.00 Tf 267.650 567.690 Td (\(text rendered in blue, clickable hyperlink\)) Tj ET
+q 0.700 0.700 0.700 RG 0.50 w 72.000 559.290 m 476.611 559.290 l S Q
+BT /F1 16.00 Tf 72.000 521.290 Td (Images) Tj ET
+BT /F0 11.00 Tf 72.000 495.090 Td (JPEG and PNG are supported. The path in ) Tj ET
+BT /F4 11.00 Tf 284.168 495.090 Td (![alt]\(path\) ) Tj ET
+BT /F0 11.00 Tf 369.968 495.090 Td (is resolved relative to the) Tj ET
+BT /F0 11.00 Tf 72.000 479.690 Td (Markdown file directory.) Tj ET
+BT /F0 11.00 Tf 72.000 454.290 Td (JPEG images are embedded directly \(DCTDecode\). PNG images are decoded using zlib) Tj ET
+BT /F0 11.00 Tf 72.000 438.890 Td (and the raw pixels are re-compressed with FlateDecode.) Tj ET
+endstream
+endobj
+12 0 obj
+<< /Type /Page /Parent 2 0 R
+   /MediaBox [0 0 595.276 841.890]
+   /Resources << /Font << /F0 3 0 R /F1 4 0 R /F2 5 0 R /F3 6 0 R /F4 7 0 R /F5 8 0 R >> >>
+   /Contents 11 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Count 2 /Kids [10 0 R 12 0 R ] >>
+endobj
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+14 0 obj
+<< /Producer (mdpdf \(https://github.com/schicho/mdpdf\)) >>
+endobj
+xref
+0 15
+0000000000 65535 f 
+0000010874 00000 n 
+0000010808 00000 n 
+0000000015 00000 n 
+0000000112 00000 n 
+0000000214 00000 n 
+0000000319 00000 n 
+0000000428 00000 n 
+0000000523 00000 n 
+0000000623 00000 n 
+0000006189 00000 n 
+0000006383 00000 n 
+0000010613 00000 n 
+0000000000 65535 f 
+0000010923 00000 n 
+trailer
+<< /Size 15 /Root 1 0 R /Info 14 0 R >>
+startxref
+11000
+%%EOF

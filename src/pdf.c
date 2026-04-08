@@ -32,6 +32,7 @@
 #define CODE_BG_B      0.98f
 #define QUOTE_BAR_W    3.0f
 #define QUOTE_INDENT   12.0f
+#define PDF_PRODUCER   "mdpdf \\(https://github.com/schicho/mdpdf\\)"
 
 /* ── limits ────────────────────────────────────────────────────────────── */
 #define MAX_OBJECTS  16384
@@ -1252,9 +1253,9 @@ int pdf_write(PDF *pdf, const char *path)
     offsets[obj_info] = (long)out.size;
     fbuf_printf(&out,
                 "%d 0 obj\n"
-                "<< /Producer (mdpdf \\(https://github.com/schicho/mdpdf\\)) >>\n"
+                "<< /Producer (%s) >>\n"
                 "endobj\n",
-                obj_info);
+                obj_info, PDF_PRODUCER);
 
     /* ── xref table ── */
     long xref_offset = (long)out.size;

@@ -174,6 +174,14 @@ static int buf_printf(Buf *b, const char *fmt, ...)
     return buf_append(b, tmp, (size_t)n);
 }
 
+/* ── link annotation record ──────────────────────────────────────────────── */
+
+typedef struct {
+    int   page_index;        /* 0-based page number */
+    float x1, y1, x2, y2;   /* annotation rect in PDF coords (from page bottom) */
+    char  url[512];
+} LinkAnnot;
+
 /* ── PDF context ──────────────────────────────────────────────────────────── */
 
 struct PDF {
@@ -200,6 +208,11 @@ struct PDF {
     int image_count;
 
     char input_dir[2048];
+
+    /* link annotations collected during rendering */
+    LinkAnnot *link_annots;
+    int        link_annot_count;
+    int        link_annot_alloc;
 };
 
 /* ── coordinate helper ──────────────────────────────────────────────────── */
@@ -242,6 +255,7 @@ void pdf_free(PDF *pdf)
     free(pdf->content.data);
     for (int i = 0; i < pdf->image_count; i++)
         image_free(pdf->images[i].img);
+    free(pdf->link_annots);
     free(pdf);
 }
 
@@ -325,6 +339,35 @@ void pdf_vbar(PDF *pdf,
                (double)r, (double)g, (double)b,
                (double)lw,
                (double)x, (double)py_top, (double)x, (double)py_bot);
+}
+
+/* ── link annotation helper ──────────────────────────────────────────────── */
+
+/*
+ * Record a clickable URI annotation for the current page.
+ * Coordinates are in PDF page coordinates (origin at bottom-left).
+ */
+static void pdf_add_link_annot(PDF *pdf,
+                                float x1, float y1, float x2, float y2,
+                                const char *url)
+{
+    if (!url || !*url) return;
+    if (pdf->link_annot_count >= pdf->link_annot_alloc) {
+        int na = pdf->link_annot_alloc ? pdf->link_annot_alloc * 2 : 64;
+        LinkAnnot *nb = realloc(pdf->link_annots,
+                                (size_t)na * sizeof(LinkAnnot));
+        if (!nb) return;
+        pdf->link_annots      = nb;
+        pdf->link_annot_alloc = na;
+    }
+    LinkAnnot *la = &pdf->link_annots[pdf->link_annot_count++];
+    la->page_index = pdf->page_count; /* current page (0-based) */
+    la->x1 = x1;
+    la->y1 = y1;
+    la->x2 = x2;
+    la->y2 = y2;
+    strncpy(la->url, url, sizeof(la->url) - 1);
+    la->url[sizeof(la->url) - 1] = '\0';
 }
 
 /* ── PDF string escaping ──────────────────────────────────────────────────── */
@@ -453,14 +496,16 @@ float pdf_text_line(PDF *pdf,
 #define MAX_SPANS 4096
 
 typedef struct {
-    int  font;    /* FONT_* constant */
+    int  font;       /* FONT_* constant */
+    int  is_link;    /* 1 if this span is a hyperlink */
+    char url[512];   /* destination URL (only when is_link == 1) */
     char text[512];
 } Span;
 
 /*
  * Parse a markdown inline string into an array of Span objects.
  * Handles: **bold**, *italic*, ***bold-italic***, __bold__, _italic_,
- *          `code`, and plain text.
+ *          `code`, [link text](url), and plain text.
  * Returns the number of spans written (up to max_spans).
  */
 static int parse_inline(const char *src, int base_font,
@@ -475,7 +520,9 @@ static int parse_inline(const char *src, int base_font,
 #define FLUSH_SPAN() do { \
     if (ti > 0 && n < max_spans) { \
         tmp[ti] = '\0'; \
-        spans[n].font = cur; \
+        spans[n].font    = cur; \
+        spans[n].is_link = 0; \
+        spans[n].url[0]  = '\0'; \
         snprintf(spans[n].text, sizeof(spans[n].text), "%s", tmp); \
         n++; ti = 0; \
     } \
@@ -491,7 +538,9 @@ static int parse_inline(const char *src, int base_font,
             const char *end = strstr(p, delim == '*' ? "***" : "___");
             if (end) {
                 if (n < max_spans) {
-                    spans[n].font = FONT_BOLDITALIC; /* always bold-italic */
+                    spans[n].font    = FONT_BOLDITALIC;
+                    spans[n].is_link = 0;
+                    spans[n].url[0]  = '\0';
                     size_t len = (size_t)(end - p);
                     if (len >= sizeof(spans[n].text)) len = sizeof(spans[n].text) - 1;
                     memcpy(spans[n].text, p, len);
@@ -513,8 +562,10 @@ static int parse_inline(const char *src, int base_font,
             const char *end = strstr(p, delim == '*' ? "**" : "__");
             if (end) {
                 if (n < max_spans) {
-                    spans[n].font = (base_font == FONT_ITALIC)
-                                        ? FONT_BOLDITALIC : FONT_BOLD;
+                    spans[n].font    = (base_font == FONT_ITALIC)
+                                           ? FONT_BOLDITALIC : FONT_BOLD;
+                    spans[n].is_link = 0;
+                    spans[n].url[0]  = '\0';
                     size_t len = (size_t)(end - p);
                     if (len >= sizeof(spans[n].text)) len = sizeof(spans[n].text) - 1;
                     memcpy(spans[n].text, p, len);
@@ -536,8 +587,10 @@ static int parse_inline(const char *src, int base_font,
                 FLUSH_SPAN();
                 p++;
                 if (n < max_spans) {
-                    spans[n].font = (base_font == FONT_BOLD)
-                                        ? FONT_BOLDITALIC : FONT_ITALIC;
+                    spans[n].font    = (base_font == FONT_BOLD)
+                                           ? FONT_BOLDITALIC : FONT_ITALIC;
+                    spans[n].is_link = 0;
+                    spans[n].url[0]  = '\0';
                     size_t len = (size_t)(end - p);
                     if (len >= sizeof(spans[n].text)) len = sizeof(spans[n].text) - 1;
                     memcpy(spans[n].text, p, len);
@@ -555,7 +608,9 @@ static int parse_inline(const char *src, int base_font,
             const char *end = strchr(p, '`');
             if (end) {
                 if (n < max_spans) {
-                    spans[n].font = FONT_MONO;
+                    spans[n].font    = FONT_MONO;
+                    spans[n].is_link = 0;
+                    spans[n].url[0]  = '\0';
                     size_t len = (size_t)(end - p);
                     if (len >= sizeof(spans[n].text)) len = sizeof(spans[n].text) - 1;
                     memcpy(spans[n].text, p, len);
@@ -573,19 +628,26 @@ static int parse_inline(const char *src, int base_font,
             const char *pe = strchr(p, ')');
             if (pe) { p = pe + 1; continue; }
         }
-        /* Skip link markup: [text](url) — keep the link text */
+        /* Link markup: [text](url) — render text in blue, record URL */
         if (p[0] == '[') {
             const char *end_bracket = strchr(p, ']');
             if (end_bracket && end_bracket[1] == '(') {
                 const char *end_paren = strchr(end_bracket, ')');
                 if (end_paren) {
                     FLUSH_SPAN();
-                    size_t len = (size_t)(end_bracket - (p + 1));
-                    if (len > 0 && n < max_spans) {
-                        spans[n].font = base_font;
-                        if (len >= sizeof(spans[n].text)) len = sizeof(spans[n].text) - 1;
-                        memcpy(spans[n].text, p + 1, len);
-                        spans[n].text[len] = '\0';
+                    size_t text_len = (size_t)(end_bracket - (p + 1));
+                    size_t url_len  = (size_t)(end_paren - (end_bracket + 2));
+                    if (text_len > 0 && n < max_spans) {
+                        spans[n].font    = base_font;
+                        spans[n].is_link = 1;
+                        if (url_len >= sizeof(spans[n].url))
+                            url_len = sizeof(spans[n].url) - 1;
+                        memcpy(spans[n].url, end_bracket + 2, url_len);
+                        spans[n].url[url_len] = '\0';
+                        if (text_len >= sizeof(spans[n].text))
+                            text_len = sizeof(spans[n].text) - 1;
+                        memcpy(spans[n].text, p + 1, text_len);
+                        spans[n].text[text_len] = '\0';
                         n++;
                     }
                     p = end_paren + 1;
@@ -613,8 +675,10 @@ static int parse_inline(const char *src, int base_font,
  */
 typedef struct {
     int   font;
-    char  text[512];  /* includes trailing space if present in source */
-    float w;          /* pre-computed width at a given size */
+    int   is_link;   /* 1 if this token is part of a hyperlink */
+    char  url[512];  /* destination URL (only when is_link == 1) */
+    char  text[512]; /* includes trailing space if present in source */
+    float w;         /* pre-computed width at a given size */
 } Token;
 
 #define MAX_TOKENS 8192
@@ -659,8 +723,11 @@ static int build_tokens(const Span *spans, int ns,
                 wlen = sizeof(toks[n].text) - 1;
             memcpy(toks[n].text, start, wlen);
             toks[n].text[wlen] = '\0';
-            toks[n].font = spans[s].font;
-            toks[n].w    = pdf_text_width(toks[n].text, toks[n].font, font_size);
+            toks[n].font    = spans[s].font;
+            toks[n].is_link = spans[s].is_link;
+            strncpy(toks[n].url, spans[s].url, sizeof(toks[n].url) - 1);
+            toks[n].url[sizeof(toks[n].url) - 1] = '\0';
+            toks[n].w       = pdf_text_width(toks[n].text, toks[n].font, font_size);
             n++;
         }
     }
@@ -681,15 +748,17 @@ float pdf_paragraph(PDF *pdf,
     float max_w   = x_right - x_left;
     if (max_w <= 0.0f) return 0.0f;
 
-    /* Parse inline markup into spans */
-    Span spans[MAX_SPANS];
-    int  ns = parse_inline(text, base_font, spans, MAX_SPANS);
-    if (ns == 0) return 0.0f;
+    /* Parse inline markup into spans (heap-allocated to avoid large stack use) */
+    Span *spans = malloc(MAX_SPANS * sizeof(Span));
+    if (!spans) return 0.0f;
+    int ns = parse_inline(text, base_font, spans, MAX_SPANS);
+    if (ns == 0) { free(spans); return 0.0f; }
 
     /* Build word token list */
     Token *toks = malloc(MAX_TOKENS * sizeof(Token));
-    if (!toks) return 0.0f;
+    if (!toks) { free(spans); return 0.0f; }
     int nt = build_tokens(spans, ns, toks, MAX_TOKENS, font_size);
+    free(spans);
 
     float total_h = 0.0f;
     int   ti      = 0; /* current token index */
@@ -713,17 +782,28 @@ float pdf_paragraph(PDF *pdf,
         }
 
         /* Render the tokens on this line, grouping consecutive same-font runs
-         * into a single BT...ET block to reduce PDF verbosity. */
+         * into a single BT...ET block to reduce PDF verbosity.
+         * Runs also break at link boundaries (different URLs or link vs. plain). */
         float x = x_left;
         int k = line_start;
         while (k < line_end) {
-            int   run_font = toks[k].font;
-            float run_x    = x;
+            int   run_font    = toks[k].font;
+            int   run_is_link = toks[k].is_link;
+            float run_x       = x;
+            float ann_x1      = x; /* annotation left edge */
 
-            /* Find the end of this same-font run */
+            /* Find the end of this same-font / same-link run */
             int run_end = k;
-            while (run_end < line_end && toks[run_end].font == run_font)
+            while (run_end < line_end &&
+                   toks[run_end].font    == run_font &&
+                   toks[run_end].is_link == run_is_link &&
+                   (!run_is_link ||
+                    strcmp(toks[run_end].url, toks[k].url) == 0))
                 run_end++;
+
+            /* Set blue fill colour for hyperlinks */
+            if (run_is_link)
+                buf_append(&pdf->content, "0 0 1 rg\n", 9);
 
             /* Concatenate all token texts in this run */
             char run_text[RUN_TEXT_BUF];
@@ -765,6 +845,24 @@ float pdf_paragraph(PDF *pdf,
                            (double)run_x, (double)py);
                 buf_pdf_string(&pdf->content, run_text);
                 buf_append(&pdf->content, " Tj ET\n", 7);
+            }
+
+            /* Restore default (black) fill colour after a link run */
+            if (run_is_link) {
+                buf_append(&pdf->content, "0 0 0 rg\n", 9);
+
+                /* Record a clickable annotation for this link segment.
+                 * Bounding box: 0.2 × size below baseline (descenders)
+                 * to 0.8 × size above baseline (cap-height). */
+                if (run_ti > 0) {
+                    float ann_x2 = ann_x1 +
+                        pdf_text_width(run_text, run_font, font_size);
+                    float ann_y1 = py - font_size * 0.2f;  /* below baseline */
+                    float ann_y2 = py + font_size * 0.8f;  /* above baseline */
+                    pdf_add_link_annot(pdf,
+                                       ann_x1, ann_y1, ann_x2, ann_y2,
+                                       toks[k].url);
+                }
             }
 
             k = run_end;
@@ -958,14 +1056,17 @@ int pdf_write(PDF *pdf, const char *path)
      *  3..8    Font objects (F0-F5)
      *  9..9+2N-1  Content streams + Page objects (pairs per page)
      *  after:  Image XObjects
+     *  after:  Link annotation objects
      */
     int n_pages  = pdf->page_count;
     int n_images = pdf->image_count;
+    int n_annots = pdf->link_annot_count;
     int obj_font_base    = 3;          /* objects 3..8 = fonts 0..5 */
     int obj_content_base = 9;          /* objects 9, 11, 13, … = content streams */
     int obj_page_base    = 10;         /* objects 10, 12, 14, … = page dicts */
     int obj_image_base   = obj_content_base + n_pages * 2;
-    int total_objs       = obj_image_base + n_images;
+    int obj_annot_base   = obj_image_base + n_images;
+    int total_objs       = obj_annot_base + n_annots;
 
     long *offsets = calloc((size_t)(total_objs + 2), sizeof(long));
     if (!offsets) return -1;
@@ -1042,6 +1143,24 @@ int pdf_write(PDF *pdf, const char *path)
         }
     }
 
+    /* ── Link annotation objects ── */
+    for (int ai = 0; ai < n_annots; ai++) {
+        int oid = obj_annot_base + ai;
+        offsets[oid] = (long)out.size;
+        LinkAnnot *la = &pdf->link_annots[ai];
+        fbuf_printf(&out,
+                    "%d 0 obj\n"
+                    "<< /Type /Annot /Subtype /Link\n"
+                    "   /Rect [%.3f %.3f %.3f %.3f]\n"
+                    "   /Border [0 0 0]\n"
+                    "   /A << /Type /Action /S /URI /URI ",
+                    oid,
+                    (double)la->x1, (double)la->y1,
+                    (double)la->x2, (double)la->y2);
+        buf_pdf_string(&out, la->url);
+        fbuf_printf(&out, " >> >>\nendobj\n");
+    }
+
     /* ── Content streams and Page objects ── */
     /* Build font resource string once */
     char font_res[512];
@@ -1092,8 +1211,26 @@ int pdf_write(PDF *pdf, const char *path)
                     font_res);
         if (n_images > 0)
             fbuf_printf(&out, " /XObject %s", xobj_res);
+        fbuf_printf(&out, " >>\n");
+
+        /* Collect link annotations that belong to this page */
+        int has_annots = 0;
+        for (int ai = 0; ai < n_annots; ai++) {
+            if (pdf->link_annots[ai].page_index == pi) {
+                has_annots = 1;
+                break;
+            }
+        }
+        if (has_annots) {
+            fbuf_printf(&out, "   /Annots [");
+            for (int ai = 0; ai < n_annots; ai++) {
+                if (pdf->link_annots[ai].page_index == pi)
+                    fbuf_printf(&out, "%d 0 R ", obj_annot_base + ai);
+            }
+            fbuf_printf(&out, "]\n");
+        }
+
         fbuf_printf(&out,
-                    " >>\n"
                     "   /Contents %d 0 R >>\n"
                     "endobj\n",
                     cs_oid);

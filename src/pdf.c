@@ -32,6 +32,7 @@
 #define CODE_BG_B      0.98f
 #define QUOTE_BAR_W    3.0f
 #define QUOTE_INDENT   12.0f
+#define PDF_PRODUCER   "mdpdf \\(https://github.com/schicho/mdpdf\\)"
 
 /* ── limits ────────────────────────────────────────────────────────────── */
 #define MAX_OBJECTS  16384
@@ -1066,7 +1067,8 @@ int pdf_write(PDF *pdf, const char *path)
     int obj_page_base    = 10;         /* objects 10, 12, 14, … = page dicts */
     int obj_image_base   = obj_content_base + n_pages * 2;
     int obj_annot_base   = obj_image_base + n_images;
-    int total_objs       = obj_annot_base + n_annots;
+    int obj_info         = obj_annot_base + n_annots + 1;
+    int total_objs       = obj_info;
 
     long *offsets = calloc((size_t)(total_objs + 2), sizeof(long));
     if (!offsets) return -1;
@@ -1247,6 +1249,14 @@ int pdf_write(PDF *pdf, const char *path)
     offsets[1] = (long)out.size;
     fbuf_printf(&out, "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n");
 
+    /* ── Info object ── */
+    offsets[obj_info] = (long)out.size;
+    fbuf_printf(&out,
+                "%d 0 obj\n"
+                "<< /Producer (%s) >>\n"
+                "endobj\n",
+                obj_info, PDF_PRODUCER);
+
     /* ── xref table ── */
     long xref_offset = (long)out.size;
     fbuf_printf(&out, "xref\n0 %d\n", total_objs + 1);
@@ -1260,9 +1270,9 @@ int pdf_write(PDF *pdf, const char *path)
 
     /* ── trailer ── */
     fbuf_printf(&out,
-                "trailer\n<< /Size %d /Root 1 0 R >>\n"
+                "trailer\n<< /Size %d /Root 1 0 R /Info %d 0 R >>\n"
                 "startxref\n%ld\n%%%%EOF\n",
-                total_objs + 1, xref_offset);
+                total_objs + 1, obj_info, xref_offset);
 
     free(offsets);
 

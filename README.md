@@ -48,8 +48,6 @@ mdpdf input.md output.pdf # explicit output path
 | Image | `![alt](path.jpg)` |
 | Link | `[text](url)` (text rendered in blue, clickable hyperlink) |
 
-Tables are not supported.
-
 ### Images
 
 JPEG and PNG are supported. The path in `![alt](path)` is

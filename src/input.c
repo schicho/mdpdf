@@ -1,12 +1,11 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include "input.h"
 
-char *input_read_file(const char *path)
-{
-    FILE *f = fopen(path, "rb");
-    if (!f)
-        return NULL;
+#include <stdio.h>
+#include <stdlib.h>
+
+char* input_read_file(const char* path) {
+    FILE* f = fopen(path, "rb");
+    if (!f) return NULL;
 
     if (fseek(f, 0, SEEK_END) != 0) {
         fclose(f);
@@ -19,7 +18,7 @@ char *input_read_file(const char *path)
     }
     rewind(f);
 
-    char *buf = malloc((size_t)size + 1);
+    char* buf = malloc((size_t)size + 1);
     if (!buf) {
         fclose(f);
         return NULL;

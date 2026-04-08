@@ -3,18 +3,17 @@
 #include <string.h>
 
 #include "input.h"
+#include "markdown.h"
 #include "paper.h"
 #include "pdf.h"
-#include "markdown.h"
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char* argv[]) {
     if (argc < 2) {
         fprintf(stderr, "Usage: %s <input.md> [output.pdf]\n", argv[0]);
         return 1;
     }
 
-    const char *input_file = argv[1];
+    const char* input_file = argv[1];
 
     /* Determine output filename */
     char output_file[4096];
@@ -22,7 +21,7 @@ int main(int argc, char *argv[])
         snprintf(output_file, sizeof(output_file), "%s", argv[2]);
     } else {
         snprintf(output_file, sizeof(output_file), "%s", input_file);
-        char *dot = strrchr(output_file, '.');
+        char* dot = strrchr(output_file, '.');
         if (dot && strcmp(dot, ".md") == 0) {
             strcpy(dot, ".pdf");
         } else {
@@ -32,7 +31,7 @@ int main(int argc, char *argv[])
     }
 
     /* Read the Markdown source */
-    char *content = input_read_file(input_file);
+    char* content = input_read_file(input_file);
     if (!content) {
         fprintf(stderr, "mdpdf: cannot read '%s'\n", input_file);
         return 1;
@@ -42,7 +41,7 @@ int main(int argc, char *argv[])
     PaperSize paper = paper_get_default();
 
     /* Create PDF context */
-    PDF *pdf = pdf_create(paper.width, paper.height);
+    PDF* pdf = pdf_create(paper.width, paper.height);
     if (!pdf) {
         fprintf(stderr, "mdpdf: out of memory\n");
         free(content);

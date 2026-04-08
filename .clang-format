@@ -1,0 +1,8 @@
+BasedOnStyle: Google
+IndentWidth: 4
+TabWidth: 4
+AlignConsecutiveDeclarations: true
+AlignConsecutiveMacros: AcrossEmptyLines
+AlignOperands: Align
+UseTab: Never
+ColumnLimit: 100

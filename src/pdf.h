@@ -4,12 +4,12 @@
 #include "paper.h"
 
 /* Font indices used throughout the renderer. */
-#define FONT_NORMAL     0   /* Helvetica            */
-#define FONT_BOLD       1   /* Helvetica-Bold       */
-#define FONT_ITALIC     2   /* Helvetica-Oblique    */
-#define FONT_BOLDITALIC 3   /* Helvetica-BoldOblique*/
-#define FONT_MONO       4   /* Courier              */
-#define FONT_MONO_BOLD  5   /* Courier-Bold         */
+#define FONT_NORMAL     0 /* Helvetica            */
+#define FONT_BOLD       1 /* Helvetica-Bold       */
+#define FONT_ITALIC     2 /* Helvetica-Oblique    */
+#define FONT_BOLDITALIC 3 /* Helvetica-BoldOblique*/
+#define FONT_MONO       4 /* Courier              */
+#define FONT_MONO_BOLD  5 /* Courier-Bold         */
 #define FONT_COUNT      6
 
 /* Opaque PDF context. */
@@ -17,53 +17,49 @@ typedef struct PDF PDF;
 
 /* ── life-cycle ─────────────────────────────────────────────────────────── */
 
-PDF  *pdf_create(float page_width, float page_height);
-void  pdf_free(PDF *pdf);
+PDF* pdf_create(float page_width, float page_height);
+void pdf_free(PDF* pdf);
 
 /* Write the assembled PDF to a file.  Returns 0 on success. */
-int   pdf_write(PDF *pdf, const char *path);
+int pdf_write(PDF* pdf, const char* path);
 
 /* Tell the engine which directory to resolve relative image paths against. */
-void  pdf_set_input_dir(PDF *pdf, const char *dir);
+void pdf_set_input_dir(PDF* pdf, const char* dir);
 
 /* ── page geometry ──────────────────────────────────────────────────────── */
 
 /* Current Y position measured from the TOP of the page content area
  * (i.e. 0 = just below the top margin). */
-float pdf_get_y(PDF *pdf);
+float pdf_get_y(PDF* pdf);
 
 /* Usable content width (page width minus both horizontal margins). */
-float pdf_content_width(PDF *pdf);
+float pdf_content_width(PDF* pdf);
 
 /* Left-margin x coordinate in PDF points. */
-float pdf_margin_left(PDF *pdf);
+float pdf_margin_left(PDF* pdf);
 
 /* Ensure at least 'height' points remain on the page; break otherwise. */
-void  pdf_ensure_space(PDF *pdf, float height);
+void pdf_ensure_space(PDF* pdf, float height);
 
 /* Force a new page. */
-void  pdf_new_page(PDF *pdf);
+void pdf_new_page(PDF* pdf);
 
 /* Move the Y cursor down by 'amount' points. */
-void  pdf_advance_y(PDF *pdf, float amount);
+void pdf_advance_y(PDF* pdf, float amount);
 
 /* ── graphics primitives ─────────────────────────────────────────────────── */
 
 /* Filled axis-aligned rectangle (r, g, b in 0–1). */
-void pdf_rect_fill(PDF *pdf,
-                   float x, float y_from_top,
-                   float w, float h,
-                   float r, float g, float b);
+void pdf_rect_fill(PDF* pdf, float x, float y_from_top, float w, float h, float r, float g,
+                   float b);
 
 /* Stroked horizontal line. */
-void pdf_hline(PDF *pdf,
-               float x, float y_from_top, float width,
-               float r, float g, float b, float lw);
+void pdf_hline(PDF* pdf, float x, float y_from_top, float width, float r, float g, float b,
+               float lw);
 
 /* Vertical bar (for blockquotes). */
-void pdf_vbar(PDF *pdf,
-              float x, float y_from_top, float height,
-              float r, float g, float b, float lw);
+void pdf_vbar(PDF* pdf, float x, float y_from_top, float height, float r, float g, float b,
+              float lw);
 
 /* ── text ──────────────────────────────────────────────────────────────── */
 
@@ -71,7 +67,7 @@ void pdf_vbar(PDF *pdf,
  * Return the width (in PDF points) of 'text' rendered at 'size' in 'font'.
  * This is purely a metrics calculation; nothing is drawn.
  */
-float pdf_text_width(const char *text, int font, float size);
+float pdf_text_width(const char* text, int font, float size);
 
 /*
  * Render a single unwrapped line of plain text at the current Y position
@@ -79,9 +75,8 @@ float pdf_text_width(const char *text, int font, float size);
  * Advances Y by 'leading' (pass 0 to use 1.2×size).
  * Returns the actual line height used.
  */
-float pdf_text_line(PDF *pdf,
-                    const char *text, int font, float size,
-                    float x_offset, float leading);
+float pdf_text_line(PDF* pdf, const char* text, int font, float size, float x_offset,
+                    float leading);
 
 /*
  * Render a paragraph of inline-formatted text with automatic word-wrap.
@@ -97,26 +92,21 @@ float pdf_text_line(PDF *pdf,
  * Automatically calls pdf_new_page() when the text reaches the bottom margin.
  * Returns total height used.
  */
-float pdf_paragraph(PDF *pdf,
-                    const char *text,
-                    float left_indent, float right_indent,
-                    float font_size,   int base_font,
-                    float leading);
+float pdf_paragraph(PDF* pdf, const char* text, float left_indent, float right_indent,
+                    float font_size, int base_font, float leading);
 
 /*
  * Render a pre-formatted code block.
  * Wraps long lines; handles page breaks between code lines.
  * Returns total height used.
  */
-float pdf_code_block(PDF *pdf, const char *code, float left_indent);
+float pdf_code_block(PDF* pdf, const char* code, float left_indent);
 
 /*
  * Embed an image from 'path' (JPEG or PNG), scaled to fit within
  * max_width × max_height (pass 0 for "no limit").
  * Returns the height used in points, or 0 on failure.
  */
-float pdf_image(PDF *pdf,
-                const char *path,
-                float max_width, float max_height);
+float pdf_image(PDF* pdf, const char* path, float max_width, float max_height);
 
 #endif /* PDF_H */

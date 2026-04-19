@@ -456,6 +456,33 @@ static void free_lines(char** lines, int count) {
     free(lines);
 }
 
+/* ---- strip inline markdown markup for plain-text use (e.g. bookmarks) -- */
+
+/*
+ * Copy 'src' into 'dst' (up to max-1 chars + NUL), removing common inline
+ * markdown delimiters: *** ** * ___ __ _ `
+ */
+static void strip_inline_markup(const char* src, char* dst, size_t max) {
+    size_t di = 0;
+    const char* p = src;
+    while (*p && di < max - 1) {
+        /* Triple delimiter *** or ___ */
+        if ((p[0] == '*' && p[1] == '*' && p[2] == '*') ||
+            (p[0] == '_' && p[1] == '_' && p[2] == '_')) {
+            p += 3;
+        /* Double delimiter ** or __ */
+        } else if ((p[0] == '*' && p[1] == '*') || (p[0] == '_' && p[1] == '_')) {
+            p += 2;
+        /* Single delimiter * _ ` */
+        } else if (*p == '*' || *p == '_' || *p == '`') {
+            p++;
+        } else {
+            dst[di++] = *p++;
+        }
+    }
+    dst[di] = '\0';
+}
+
 /* ---- render a heading -------------------------------------------------- */
 
 static void render_heading(PDF* pdf, const char* text, int level) {
@@ -467,6 +494,12 @@ static void render_heading(PDF* pdf, const char* text, int level) {
         HEAD_BEFORE + leading + HEAD_AFTER + (level <= 2 ? 4.0f : 0.0f); /* extra for underline */
 
     pdf_ensure_space(pdf, h_needed);
+
+    /* Record bookmark at the top of the heading area (after any page break). */
+    char bm_title[512];
+    strip_inline_markup(text, bm_title, sizeof(bm_title));
+    pdf_add_bookmark(pdf, bm_title);
+
     pdf_advance_y(pdf, HEAD_BEFORE);
 
     int font = FONT_BOLD;

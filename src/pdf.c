@@ -908,9 +908,9 @@ float pdf_measure_paragraph(PDF* pdf, const char* text, float left_indent, float
     if (!text || !*text) return 0.0f;
     if (leading <= 0.0f) leading = font_size * 1.4f;
 
-    float x_left  = pdf->ml + left_indent;
+    float x_left = pdf->ml + left_indent;
     float x_right = pdf->pw - pdf->mr - right_indent;
-    float max_w   = x_right - x_left;
+    float max_w = x_right - x_left;
     if (max_w <= 0.0f) return 0.0f;
 
     Span* spans = malloc(MAX_SPANS * sizeof(Span));
@@ -930,11 +930,11 @@ float pdf_measure_paragraph(PDF* pdf, const char* text, float left_indent, float
     free(spans);
 
     float total_h = 0.0f;
-    int   ti      = 0;
+    int   ti = 0;
     while (ti < nt) {
-        float line_w   = 0.0f;
+        float line_w = 0.0f;
         int   line_start = ti;
-        int   line_end   = ti;
+        int   line_end = ti;
         while (ti < nt) {
             float tw = toks[ti].w;
             if (line_end > line_start && line_w + tw > max_w) break;
@@ -1290,7 +1290,7 @@ int pdf_write(PDF* pdf, const char* path) {
 
             /* Destination: go to the correct page and y position. */
             int   page_oid = obj_page_base + bm->page_index * 2;
-            float dest_y   = pdf->ph - pdf->mt - bm->y_from_top;
+            float dest_y = pdf->ph - pdf->mt - bm->y_from_top;
 
             fbuf_printf(&out,
                         "%d 0 obj\n"
@@ -1301,8 +1301,7 @@ int pdf_write(PDF* pdf, const char* path) {
                         "\n   /Parent %d 0 R\n"
                         "   /Dest [%d 0 R /XYZ null %.3f null]\n",
                         obj_outlines, page_oid, (double)dest_y);
-            if (bi > 0)
-                fbuf_printf(&out, "   /Prev %d 0 R\n", obj_outline_item_base + bi - 1);
+            if (bi > 0) fbuf_printf(&out, "   /Prev %d 0 R\n", obj_outline_item_base + bi - 1);
             if (bi < n_bookmarks - 1)
                 fbuf_printf(&out, "   /Next %d 0 R\n", obj_outline_item_base + bi + 1);
             fbuf_printf(&out, ">>\nendobj\n");
@@ -1317,8 +1316,7 @@ int pdf_write(PDF* pdf, const char* path) {
                     "   /First %d 0 R\n"
                     "   /Last %d 0 R\n"
                     ">>\nendobj\n",
-                    obj_outlines, n_bookmarks,
-                    obj_outline_item_base,
+                    obj_outlines, n_bookmarks, obj_outline_item_base,
                     obj_outline_item_base + n_bookmarks - 1);
     }
 

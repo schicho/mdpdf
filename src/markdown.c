@@ -51,19 +51,19 @@
 #define QUOTE_BAR_W   3.0f
 
 /* ---- table constants --------------------------------------------------- */
-#define TABLE_CELL_PAD_H  6.0f  /* horizontal padding inside each cell */
-#define TABLE_CELL_PAD_V  4.0f  /* vertical padding inside each cell (each side) */
-#define TABLE_BEFORE      8.0f  /* vertical space before the table */
-#define TABLE_AFTER       8.0f  /* vertical space after the table */
-#define TABLE_BORDER_R    0.70f /* cell border colour */
-#define TABLE_BORDER_G    0.70f
-#define TABLE_BORDER_B    0.70f
-#define TABLE_HDR_BG_R    0.92f /* header row background */
-#define TABLE_HDR_BG_G    0.92f
-#define TABLE_HDR_BG_B    0.95f
-#define TABLE_MIN_COL_W   10.0f /* minimum column content width in points */
-#define MAX_COLS          32    /* max columns in a table */
-#define MAX_TABLE_ROWS    256   /* max rows collected per table */
+#define TABLE_CELL_PAD_H 6.0f  /* horizontal padding inside each cell */
+#define TABLE_CELL_PAD_V 4.0f  /* vertical padding inside each cell (each side) */
+#define TABLE_BEFORE     8.0f  /* vertical space before the table */
+#define TABLE_AFTER      8.0f  /* vertical space after the table */
+#define TABLE_BORDER_R   0.70f /* cell border colour */
+#define TABLE_BORDER_G   0.70f
+#define TABLE_BORDER_B   0.70f
+#define TABLE_HDR_BG_R   0.92f /* header row background */
+#define TABLE_HDR_BG_G   0.92f
+#define TABLE_HDR_BG_B   0.95f
+#define TABLE_MIN_COL_W  10.0f /* minimum column content width in points */
+#define MAX_COLS         32    /* max columns in a table */
+#define MAX_TABLE_ROWS   256   /* max rows collected per table */
 
 /* ---- small string utilities ------------------------------------------- */
 
@@ -200,12 +200,12 @@ static void render_table(PDF* pdf, TableRow* rows, int row_count, int col_count)
 
         /* measure row height: max over all cells */
         float leading = BODY_SIZE * 1.4f;
-        float row_h   = leading; /* at least one line */
+        float row_h = leading; /* at least one line */
         for (int c = 0; c < rows[r].col_count; c++) {
             if (!rows[r].cells[c] || !rows[r].cells[c][0]) continue;
             float li = col_x[c] + TABLE_CELL_PAD_H;
             float ri = cw - col_x[c + 1] + TABLE_CELL_PAD_H;
-            float h  = pdf_measure_paragraph(pdf, rows[r].cells[c], li, ri, BODY_SIZE, font, 0.0f);
+            float h = pdf_measure_paragraph(pdf, rows[r].cells[c], li, ri, BODY_SIZE, font, 0.0f);
             if (h > row_h) row_h = h;
         }
         row_h += 2.0f * TABLE_CELL_PAD_V;
@@ -463,18 +463,18 @@ static void free_lines(char** lines, int count) {
  * markdown delimiters: *** ** * ___ __ _ `
  */
 static void strip_inline_markup(const char* src, char* dst, size_t max) {
-    size_t di = 0;
+    size_t      di = 0;
     const char* p = src;
     while (*p && di < max - 1) {
         /* Triple delimiter *** or ___ */
         if (((p[0] == '*' && p[1] == '*' && p[2] == '*') ||
-             (p[0] == '_' && p[1] == '_' && p[2] == '_')) && p[1] && p[2]) {
+             (p[0] == '_' && p[1] == '_' && p[2] == '_')) &&
+            p[1] && p[2]) {
             p += 3;
-        /* Double delimiter ** or __ */
-        } else if (((p[0] == '*' && p[1] == '*') ||
-                    (p[0] == '_' && p[1] == '_')) && p[1]) {
+            /* Double delimiter ** or __ */
+        } else if (((p[0] == '*' && p[1] == '*') || (p[0] == '_' && p[1] == '_')) && p[1]) {
             p += 2;
-        /* Single delimiter * _ ` */
+            /* Single delimiter * _ ` */
         } else if (*p == '*' || *p == '_' || *p == '`') {
             p++;
         } else {
@@ -758,16 +758,16 @@ int markdown_to_pdf(const char* content, PDF* pdf, const char* input_path) {
     } while (0)
 
     /* Helper: flush table */
-#define FLUSH_TABLE()                                                               \
-    do {                                                                            \
-        if (tbl_row_count > 0) {                                                    \
-            pdf_advance_y(pdf, TABLE_BEFORE);                                       \
-            render_table(pdf, tbl_rows, tbl_row_count, tbl_col_count);              \
-            pdf_advance_y(pdf, TABLE_AFTER);                                        \
+#define FLUSH_TABLE()                                                                 \
+    do {                                                                              \
+        if (tbl_row_count > 0) {                                                      \
+            pdf_advance_y(pdf, TABLE_BEFORE);                                         \
+            render_table(pdf, tbl_rows, tbl_row_count, tbl_col_count);                \
+            pdf_advance_y(pdf, TABLE_AFTER);                                          \
             for (int _r = 0; _r < tbl_row_count; _r++) table_row_free(&tbl_rows[_r]); \
-            tbl_row_count = 0;                                                      \
-            tbl_col_count = 0;                                                      \
-        }                                                                           \
+            tbl_row_count = 0;                                                        \
+            tbl_col_count = 0;                                                        \
+        }                                                                             \
     } while (0)
 
     for (int li = 0; li < line_count; li++) {

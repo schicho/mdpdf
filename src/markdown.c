@@ -467,11 +467,12 @@ static void strip_inline_markup(const char* src, char* dst, size_t max) {
     const char* p = src;
     while (*p && di < max - 1) {
         /* Triple delimiter *** or ___ */
-        if ((p[0] == '*' && p[1] == '*' && p[2] == '*') ||
-            (p[0] == '_' && p[1] == '_' && p[2] == '_')) {
+        if (((p[0] == '*' && p[1] == '*' && p[2] == '*') ||
+             (p[0] == '_' && p[1] == '_' && p[2] == '_')) && p[1] && p[2]) {
             p += 3;
         /* Double delimiter ** or __ */
-        } else if ((p[0] == '*' && p[1] == '*') || (p[0] == '_' && p[1] == '_')) {
+        } else if (((p[0] == '*' && p[1] == '*') ||
+                    (p[0] == '_' && p[1] == '_')) && p[1]) {
             p += 2;
         /* Single delimiter * _ ` */
         } else if (*p == '*' || *p == '_' || *p == '`') {

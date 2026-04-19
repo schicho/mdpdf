@@ -175,6 +175,14 @@ typedef struct {
     char  url[512];
 } LinkAnnot;
 
+/* ── bookmark record ─────────────────────────────────────────────────────── */
+
+typedef struct {
+    char  title[512]; /* plain-text heading label */
+    int   page_index; /* 0-based page number */
+    float y_from_top; /* distance from top of content area at time of recording */
+} Bookmark;
+
 /* ── PDF context ──────────────────────────────────────────────────────────── */
 
 struct PDF {
@@ -206,6 +214,11 @@ struct PDF {
     LinkAnnot* link_annots;
     int        link_annot_count;
     int        link_annot_alloc;
+
+    /* bookmarks (PDF outline entries) collected during rendering */
+    Bookmark* bookmarks;
+    int       bookmark_count;
+    int       bookmark_alloc;
 };
 
 /* ── coordinate helper ──────────────────────────────────────────────────── */
@@ -245,6 +258,7 @@ void pdf_free(PDF* pdf) {
     free(pdf->content.data);
     for (int i = 0; i < pdf->image_count; i++) image_free(pdf->images[i].img);
     free(pdf->link_annots);
+    free(pdf->bookmarks);
     free(pdf);
 }
 
@@ -332,6 +346,24 @@ static void pdf_add_link_annot(PDF* pdf, float x1, float y1, float x2, float y2,
     la->y2 = y2;
     strncpy(la->url, url, sizeof(la->url) - 1);
     la->url[sizeof(la->url) - 1] = '\0';
+}
+
+/* ── bookmark helper ─────────────────────────────────────────────────────── */
+
+void pdf_add_bookmark(PDF* pdf, const char* title) {
+    if (!title || !*title) return;
+    if (pdf->bookmark_count >= pdf->bookmark_alloc) {
+        int       na = pdf->bookmark_alloc ? pdf->bookmark_alloc * 2 : 32;
+        Bookmark* nb = realloc(pdf->bookmarks, (size_t)na * sizeof(Bookmark));
+        if (!nb) return;
+        pdf->bookmarks = nb;
+        pdf->bookmark_alloc = na;
+    }
+    Bookmark* bm = &pdf->bookmarks[pdf->bookmark_count++];
+    bm->page_index = pdf->page_count; /* current page (0-based) */
+    bm->y_from_top = pdf->y;
+    strncpy(bm->title, title, sizeof(bm->title) - 1);
+    bm->title[sizeof(bm->title) - 1] = '\0';
 }
 
 /* ── PDF string escaping ──────────────────────────────────────────────────── */
@@ -876,9 +908,9 @@ float pdf_measure_paragraph(PDF* pdf, const char* text, float left_indent, float
     if (!text || !*text) return 0.0f;
     if (leading <= 0.0f) leading = font_size * 1.4f;
 
-    float x_left  = pdf->ml + left_indent;
+    float x_left = pdf->ml + left_indent;
     float x_right = pdf->pw - pdf->mr - right_indent;
-    float max_w   = x_right - x_left;
+    float max_w = x_right - x_left;
     if (max_w <= 0.0f) return 0.0f;
 
     Span* spans = malloc(MAX_SPANS * sizeof(Span));
@@ -898,11 +930,11 @@ float pdf_measure_paragraph(PDF* pdf, const char* text, float left_indent, float
     free(spans);
 
     float total_h = 0.0f;
-    int   ti      = 0;
+    int   ti = 0;
     while (ti < nt) {
-        float line_w   = 0.0f;
+        float line_w = 0.0f;
         int   line_start = ti;
-        int   line_end   = ti;
+        int   line_end = ti;
         while (ti < nt) {
             float tw = toks[ti].w;
             if (line_end > line_start && line_w + tw > max_w) break;
@@ -1113,16 +1145,22 @@ int pdf_write(PDF* pdf, const char* path) {
      *  9..9+2N-1  Content streams + Page objects (pairs per page)
      *  after:  Image XObjects
      *  after:  Link annotation objects
+     *  after:  Outlines dictionary (only if bookmarks exist)
+     *  after:  Outline item objects (one per bookmark)
+     *  after:  Info object
      */
     int n_pages = pdf->page_count;
     int n_images = pdf->image_count;
     int n_annots = pdf->link_annot_count;
+    int n_bookmarks = pdf->bookmark_count;
     int obj_font_base = 3;    /* objects 3..8 = fonts 0..5 */
     int obj_content_base = 9; /* objects 9, 11, 13, … = content streams */
     int obj_page_base = 10;   /* objects 10, 12, 14, … = page dicts */
     int obj_image_base = obj_content_base + n_pages * 2;
     int obj_annot_base = obj_image_base + n_images;
-    int obj_info = obj_annot_base + n_annots + 1;
+    int obj_outlines = obj_annot_base + n_annots + 1;
+    int obj_outline_item_base = obj_outlines + 1;
+    int obj_info = obj_outline_item_base + n_bookmarks;
     int total_objs = obj_info;
 
     long* offsets = calloc((size_t)(total_objs + 2), sizeof(long));
@@ -1243,6 +1281,45 @@ int pdf_write(PDF* pdf, const char* path) {
         fbuf_printf(&out, " >> >>\nendobj\n");
     }
 
+    /* ── Outline item objects (one per bookmark) ── */
+    if (n_bookmarks > 0) {
+        for (int bi = 0; bi < n_bookmarks; bi++) {
+            int oid = obj_outline_item_base + bi;
+            offsets[oid] = (long)out.size;
+            Bookmark* bm = &pdf->bookmarks[bi];
+
+            /* Destination: go to the correct page and y position. */
+            int   page_oid = obj_page_base + bm->page_index * 2;
+            float dest_y = pdf->ph - pdf->mt - bm->y_from_top;
+
+            fbuf_printf(&out,
+                        "%d 0 obj\n"
+                        "<< /Title ",
+                        oid);
+            buf_pdf_string(&out, bm->title);
+            fbuf_printf(&out,
+                        "\n   /Parent %d 0 R\n"
+                        "   /Dest [%d 0 R /XYZ null %.3f null]\n",
+                        obj_outlines, page_oid, (double)dest_y);
+            if (bi > 0) fbuf_printf(&out, "   /Prev %d 0 R\n", obj_outline_item_base + bi - 1);
+            if (bi < n_bookmarks - 1)
+                fbuf_printf(&out, "   /Next %d 0 R\n", obj_outline_item_base + bi + 1);
+            fbuf_printf(&out, ">>\nendobj\n");
+        }
+
+        /* ── Outlines dictionary ── */
+        offsets[obj_outlines] = (long)out.size;
+        fbuf_printf(&out,
+                    "%d 0 obj\n"
+                    "<< /Type /Outlines\n"
+                    "   /Count %d\n"
+                    "   /First %d 0 R\n"
+                    "   /Last %d 0 R\n"
+                    ">>\nendobj\n",
+                    obj_outlines, n_bookmarks, obj_outline_item_base,
+                    obj_outline_item_base + n_bookmarks - 1);
+    }
+
     /* ── Content streams and Page objects ── */
     /* Build font resource string once */
     char font_res[512];
@@ -1325,7 +1402,10 @@ int pdf_write(PDF* pdf, const char* path) {
 
     /* ── Catalog (1) ── */
     offsets[1] = (long)out.size;
-    fbuf_printf(&out, "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n");
+    fbuf_printf(&out, "1 0 obj\n<< /Type /Catalog /Pages 2 0 R");
+    if (n_bookmarks > 0)
+        fbuf_printf(&out, " /Outlines %d 0 R /PageMode /UseOutlines", obj_outlines);
+    fbuf_printf(&out, " >>\nendobj\n");
 
     /* ── Info object ── */
     offsets[obj_info] = (long)out.size;

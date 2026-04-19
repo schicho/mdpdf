@@ -124,4 +124,13 @@ float pdf_inline_width(const char* text, float font_size, int base_font);
  */
 float pdf_image(PDF* pdf, const char* path, float max_width, float max_height);
 
+/* ── bookmarks (PDF outline) ───────────────────────────────────────────── */
+
+/*
+ * Record a navigation bookmark at the current page/position.
+ * 'title' is the plain-text heading label shown in the PDF outline panel.
+ * Must be called during rendering (before pdf_write).
+ */
+void pdf_add_bookmark(PDF* pdf, const char* title);
+
 #endif /* PDF_H */
